@@ -1,0 +1,28 @@
+---
+interface Props {
+	date?: Date | string | number | null;
+}
+
+const { date } = Astro.props;
+
+const safeDate = (() => {
+	if (date === null || date === undefined || date === "") {
+		return null;
+	}
+
+	const parsedDate = date instanceof Date ? date : new Date(date);
+	return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+})();
+---
+
+{
+	safeDate && (
+		<time datetime={safeDate.toISOString()}>
+			{safeDate.toLocaleDateString("en-us", {
+				year: "numeric",
+				month: "short",
+				day: "numeric",
+			})}
+		</time>
+	)
+}

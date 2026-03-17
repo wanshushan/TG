@@ -1,0 +1,27 @@
+{
+    "apiEndpoint": "http://127.0.0.1:11434/api/chat",
+    "apiKey": "",
+    "apiKeyEnv": "",
+    "model": "deepseek-r1:14b",
+    "selectedOptionName": "本地 DeepSeek R1 14B",
+    "modelOptions": [
+        {
+            "name": "本地 DeepSeek R1 14B",
+            "apiEndpoint": "http://127.0.0.1:11434/api/chat",
+            "model": "deepseek-r1:14b"
+        },
+        {
+            "name": "本地 Llama 3.2",
+            "apiEndpoint": "http://127.0.0.1:11434/api/chat",
+            "model": "llama3.2"
+        },
+        {
+            "name": "网络 DeepSeek 示例",
+            "apiEndpoint": "https://api.deepseek.com/chat/completions",
+            "apiKeyEnv": "DEEPSEEK_API_KEY",
+            "model": "deepseek-chat"
+        }
+    ],
+    "systemPrompt": "你是一个有帮助的助手。",
+    "exampleApiEndpoint": "http://127.0.0.1:11434/api/chat"
+}

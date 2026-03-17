@@ -1,0 +1,14 @@
+node_modules/
+
+FE/node_modules/
+FE/dist/
+FE/.astro/
+
+*.log
+
+.env
+.env.*
+FE/.env
+FE/.env.*
+
+.fe-git-backup-*/

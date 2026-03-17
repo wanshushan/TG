@@ -1,0 +1,1194 @@
+---
+import BaseHead from "../../components/BaseHead.astro";
+import Header from "../../components/Header.astro";
+---
+
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <BaseHead title="项目" description="AI 对话项目页" />
+        <style>
+            :global(html) {
+                scrollbar-width: thin;
+                scrollbar-color: rgba(var(--gray), 0.65)
+                    rgba(var(--gray-light), 0.6);
+            }
+            :global(html::-webkit-scrollbar),
+            :global(body::-webkit-scrollbar),
+            .messages::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            :global(html::-webkit-scrollbar-track),
+            :global(body::-webkit-scrollbar-track),
+            .messages::-webkit-scrollbar-track {
+                background: rgba(var(--gray-light), 0.6);
+            }
+            :global(html::-webkit-scrollbar-thumb),
+            :global(body::-webkit-scrollbar-thumb),
+            .messages::-webkit-scrollbar-thumb {
+                background: rgba(var(--gray), 0.65);
+                border-radius: 999px;
+            }
+            :global(html::-webkit-scrollbar-thumb:hover),
+            :global(body::-webkit-scrollbar-thumb:hover),
+            .messages::-webkit-scrollbar-thumb:hover {
+                background: rgba(var(--gray), 0.85);
+            }
+            :global(body) {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+            main.chat-page {
+                width: 100%;
+                max-width: none;
+                margin: 0;
+                padding: 0.8rem 0;
+                flex: 1;
+                min-height: 0;
+                display: flex;
+                --chat-radius: 0.95rem;
+                --chat-radius-sm: 0.8rem;
+            }
+            .chat-shell {
+                flex: 1;
+                width: calc(100% - 10px);
+                margin: 0 auto;
+                min-height: 0;
+                border: 1px solid rgba(var(--gray), 0.35);
+                border-radius: var(--chat-radius);
+                background: white;
+                display: grid;
+                grid-template-rows: auto minmax(0, 1fr) auto;
+                overflow: hidden;
+            }
+            .chat-topbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 1rem;
+                padding: 1rem 1.1rem;
+                border-bottom: 1px solid rgba(var(--gray), 0.35);
+                background: rgba(var(--gray-light), 0.75);
+            }
+            .topbar-left {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.35rem;
+            }
+            .topbar-right {
+                display: flex;
+                align-items: center;
+                gap: 0.6rem;
+                justify-content: flex-end;
+                flex-wrap: wrap;
+            }
+            .history-picker {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.45rem;
+                padding: 0.2rem 0.35rem;
+                border-radius: 999px;
+                border: 1px solid rgba(var(--gray), 0.45);
+                background: white;
+            }
+            .history-picker span {
+                font-size: 0.78rem;
+                line-height: 1;
+                color: rgba(var(--gray-dark), 0.8);
+            }
+            .history-picker select {
+                border: 0;
+                background: transparent;
+                color: rgb(var(--gray-dark));
+                font-size: 0.82rem;
+                line-height: 1.2;
+                min-width: 9.5rem;
+            }
+            .history-picker select:focus {
+                outline: none;
+            }
+            .model-picker {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.45rem;
+                padding: 0.2rem 0.35rem;
+                border-radius: 999px;
+                border: 1px solid rgba(var(--gray), 0.45);
+                background: white;
+            }
+            .model-picker span {
+                font-size: 0.78rem;
+                line-height: 1;
+                color: rgba(var(--gray-dark), 0.8);
+            }
+            .model-picker select {
+                border: 0;
+                background: transparent;
+                color: rgb(var(--gray-dark));
+                font-size: 0.82rem;
+                line-height: 1.2;
+                min-width: 8rem;
+            }
+            .model-picker select:focus {
+                outline: none;
+            }
+            .chat-topbar h1 {
+                margin: 0;
+                font-size: 1.35rem;
+                line-height: 1.25;
+            }
+            .subtitle {
+                margin: 0.3rem 0 0;
+                font-size: 0.95rem;
+                color: rgba(var(--gray-dark), 0.82);
+            }
+            .status {
+                margin: 0;
+                padding: 0.35rem 0.75rem;
+                border-radius: 999px;
+                border: 1px solid rgba(var(--accent), 0.35);
+                background: rgba(var(--accent), 0.12);
+                font-size: 0.8rem;
+                line-height: 1.25;
+                color: var(--accent-dark);
+                white-space: nowrap;
+            }
+            .messages {
+                min-height: 0;
+                overflow-y: auto;
+                padding: 1rem;
+                background: rgba(var(--gray-light), 0.45);
+            }
+            .empty-state {
+                margin: 16vh auto 0;
+                max-width: 500px;
+                text-align: center;
+                border: 1px dashed rgba(var(--gray), 0.5);
+                border-radius: var(--chat-radius);
+                padding: 1rem 1.2rem;
+                background: rgb(var(--gray-light));
+            }
+            .empty-state h2 {
+                margin: 0 0 0.35rem;
+                font-size: 1.15rem;
+            }
+            .empty-state p {
+                margin: 0;
+                font-size: 0.95rem;
+                color: rgba(var(--gray-dark), 0.82);
+            }
+            :global(.message-row) {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.6rem;
+                width: calc(100% - 20px);
+                margin: 0 auto 0.85rem;
+            }
+            :global(.message-row.user) {
+                flex-direction: row-reverse;
+            }
+            :global(.avatar) {
+                width: 1.95rem;
+                height: 1.95rem;
+                border-radius: 999px;
+                border: 1px solid rgba(var(--gray), 0.45);
+                background: rgb(var(--gray-light));
+                color: rgb(var(--gray-dark));
+                font-size: 0.72rem;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            :global(.message-row.user .avatar) {
+                background: rgba(var(--accent), 0.15);
+                border-color: rgba(var(--accent), 0.35);
+                color: rgb(var(--accent-dark));
+            }
+            :global(.bubble) {
+                max-width: min(74%, 720px);
+                padding: 0.78rem 1rem;
+                border-radius: 1.08rem;
+                border: 1px solid rgba(var(--gray), 0.46);
+                background: white;
+                color: rgb(var(--gray-dark));
+                font-size: 0.95rem;
+                line-height: 1.55;
+                word-break: break-word;
+            }
+            :global(.message-row.ai .bubble) {
+                border-top-left-radius: 0.52rem;
+            }
+            :global(.bubble)
+                :where(h1, h2, h3, h4, h5, h6, p, ul, ol, blockquote, pre) {
+                margin: 0 0 0.72rem;
+            }
+            :global(.bubble) :where(h1, h2, h3, h4, h5, h6) {
+                line-height: 1.35;
+            }
+            :global(.bubble)
+                :where(
+                    p:last-child,
+                    ul:last-child,
+                    ol:last-child,
+                    blockquote:last-child,
+                    pre:last-child
+                ) {
+                margin-bottom: 0;
+            }
+            :global(.bubble) :where(ul, ol) {
+                padding-left: 1.2rem;
+            }
+            :global(.bubble) :where(pre) {
+                padding: 0.68rem 0.75rem;
+                overflow-x: auto;
+                border-radius: 0.62rem;
+                border: 1px solid rgba(var(--gray), 0.35);
+                background: rgba(var(--gray-light), 0.75);
+            }
+            :global(.bubble) :where(code) {
+                padding: 0.1rem 0.35rem;
+                border-radius: 0.4rem;
+                background: rgba(var(--gray-light), 0.85);
+            }
+            :global(.bubble) :where(pre code) {
+                padding: 0;
+                border-radius: 0;
+                background: transparent;
+            }
+            :global(.bubble) :where(a) {
+                color: var(--accent-dark);
+                text-decoration: underline;
+            }
+            :global(.message-row.user .bubble) {
+                background: var(--accent);
+                border-color: var(--accent-dark);
+                color: white;
+                border-radius: 1.08rem;
+                border-top-right-radius: 0.52rem;
+            }
+            :global(.message-row.user .bubble) :where(a) {
+                color: white;
+            }
+            :global(.message-row.user .bubble) :where(code) {
+                background: rgba(255, 255, 255, 0.18);
+                color: white;
+            }
+            :global(.message-row.user .bubble) :where(pre) {
+                border-color: rgba(255, 255, 255, 0.3);
+                background: rgba(0, 0, 0, 0.16);
+            }
+            .chat-form {
+                display: flex;
+                align-items: flex-end;
+                gap: 0.7rem;
+                padding: 0.85rem 1rem 1rem;
+                border-top: 1px solid rgba(var(--gray), 0.35);
+                background: rgba(var(--gray-light), 0.75);
+            }
+            .chat-form textarea {
+                flex: 1;
+                margin: 0;
+                min-height: 2.9rem;
+                max-height: 10rem;
+                padding: 0.72rem 0.8rem;
+                border: 1px solid rgba(var(--gray), 0.56);
+                border-radius: var(--chat-radius-sm);
+                background: white;
+                color: rgb(var(--gray-dark));
+                font-size: 0.95rem;
+                line-height: 1.45;
+                resize: none;
+            }
+            .chat-form textarea:focus {
+                outline: 2px solid rgba(var(--accent), 0.3);
+                border-color: rgba(var(--accent), 0.45);
+            }
+            .chat-form button {
+                height: 2.9rem;
+                padding: 0 1rem;
+                border: 1px solid var(--accent-dark);
+                border-radius: var(--chat-radius-sm);
+                background: var(--accent-dark);
+                color: white;
+                font-size: 0.95rem;
+                cursor: pointer;
+            }
+            .chat-form button:disabled {
+                opacity: 0.55;
+                cursor: not-allowed;
+            }
+            @media (max-width: 720px) {
+                main.chat-page {
+                    width: 100%;
+                    min-height: 0;
+                    padding: 0.55rem 0;
+                    --chat-radius: 0.85rem;
+                    --chat-radius-sm: 0.75rem;
+                }
+                .chat-shell {
+                    border-radius: var(--chat-radius);
+                }
+                .chat-topbar {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 0.55rem;
+                }
+                .topbar-right {
+                    width: 100%;
+                    justify-content: flex-start;
+                }
+                .topbar-left {
+                    width: 100%;
+                }
+                .status {
+                    white-space: normal;
+                }
+                :global(.bubble) {
+                    max-width: 90%;
+                }
+                .chat-form {
+                    padding: 0.75rem;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <Header />
+        <main class="chat-page">
+            <section class="chat-shell">
+                <div class="chat-topbar">
+                    <div class="topbar-left">
+                        <h1>AI 对话</h1>
+                        <label class="history-picker" for="history-select">
+                            <span>对话记录</span>
+                            <select
+                                id="history-select"
+                                aria-label="选择对话记录"></select>
+                        </label>
+                    </div>
+                    <div class="topbar-right">
+                        <label class="model-picker" for="model-select">
+                            <span>模型/API</span>
+                            <select id="model-select" aria-label="选择模型"
+                            ></select>
+                        </label>
+                        <div id="status" class="status">
+                            正在读取 API 配置...
+                        </div>
+                    </div>
+                </div>
+                <section id="messages" class="messages" aria-live="polite">
+                    <div id="empty-state" class="empty-state">
+                        <h2>新对话</h2>
+                        <p>
+                            -输入问题开始吧-
+                        </p>
+                    </div>
+                </section>
+                <form id="chat-form" class="chat-form">
+                    <textarea
+                        id="user-input"
+                        rows="1"
+                        placeholder="给 AI 发送消息（Enter 发送，Shift+Enter 换行）"
+                        required></textarea>
+                    <button id="send-btn" type="submit">发送</button>
+                </form>
+            </section>
+        </main>
+
+        <script>
+            import { marked } from "marked";
+            import DOMPurify from "dompurify";
+
+            const statusEl = document.querySelector(
+                "#status",
+            ) as HTMLDivElement | null;
+            const messagesEl = document.querySelector(
+                "#messages",
+            ) as HTMLElement | null;
+            const emptyStateEl = document.querySelector(
+                "#empty-state",
+            ) as HTMLDivElement | null;
+            const formEl = document.querySelector(
+                "#chat-form",
+            ) as HTMLFormElement | null;
+            const inputEl = document.querySelector(
+                "#user-input",
+            ) as HTMLTextAreaElement | null;
+            const sendBtn = document.querySelector(
+                "#send-btn",
+            ) as HTMLButtonElement | null;
+            const modelSelectEl = document.querySelector(
+                "#model-select",
+            ) as HTMLSelectElement | null;
+            const historySelectEl = document.querySelector(
+                "#history-select",
+            ) as HTMLSelectElement | null;
+            const configUrl = "/project/api.json";
+            const chatProxyUrl = "/project/chat";
+            let apiEndpoint = "";
+            let model = "llama3.2";
+            let selectedOptionName = "";
+            let currentRecordName = "";
+            type ModelOptionConfig = {
+                name: string;
+                model: string;
+                apiEndpoint: string;
+                systemPrompt: string;
+            };
+            type ChatHistoryMessage = {
+                role: "user" | "assistant";
+                content: string;
+            };
+            let modelOptions: ModelOptionConfig[] = [];
+            let recordNames: string[] = [];
+            let systemPrompt = "";
+            const chatHistory: ChatHistoryMessage[] = [];
+
+            function normalizeModelOptions(
+                options: Array<
+                    | string
+                    | {
+                          name?: string;
+                          label?: string;
+                          model?: string;
+                          apiEndpoint?: string;
+                          systemPrompt?: string;
+                      }
+                >,
+                fallback: {
+                    apiEndpoint: string;
+                    model: string;
+                    systemPrompt: string;
+                },
+            ): ModelOptionConfig[] {
+                const normalized: ModelOptionConfig[] = [];
+
+                for (const option of options) {
+                    if (typeof option === "string") {
+                        const value = option.trim();
+                        if (!value) {
+                            continue;
+                        }
+                        normalized.push({
+                            name: value,
+                            model: value,
+                            apiEndpoint: fallback.apiEndpoint,
+                            systemPrompt: fallback.systemPrompt,
+                        });
+                        continue;
+                    }
+
+                    if (!option || typeof option !== "object") {
+                        continue;
+                    }
+
+                    const optionModel = (option.model || "").trim();
+                    const optionName = (
+                        option.name ||
+                        option.label ||
+                        optionModel
+                    ).trim();
+                    const optionEndpoint = (
+                        option.apiEndpoint || fallback.apiEndpoint
+                    ).trim();
+
+                    if (!optionName || !optionModel || !optionEndpoint) {
+                        continue;
+                    }
+
+                    normalized.push({
+                        name: optionName,
+                        model: optionModel,
+                        apiEndpoint: optionEndpoint,
+                        systemPrompt: (
+                            option.systemPrompt ?? fallback.systemPrompt
+                        ).trim(),
+                    });
+                }
+
+                const dedup = new Map<string, ModelOptionConfig>();
+                for (const item of normalized) {
+                    if (!dedup.has(item.name)) {
+                        dedup.set(item.name, item);
+                    }
+                }
+
+                const result = Array.from(dedup.values());
+                if (
+                    result.length === 0 &&
+                    fallback.model &&
+                    fallback.apiEndpoint
+                ) {
+                    result.push({
+                        name: fallback.model,
+                        model: fallback.model,
+                        apiEndpoint: fallback.apiEndpoint,
+                        systemPrompt: fallback.systemPrompt,
+                    });
+                }
+
+                return result;
+            }
+
+            function normalizeApiEndpoint(endpoint: string): string {
+                const trimmed = endpoint.trim();
+                if (/^https:\/\/api\.deepseek\.com\/?$/i.test(trimmed)) {
+                    return "https://api.deepseek.com/chat/completions";
+                }
+                return trimmed;
+            }
+
+            function applySelectedOption(optionName: string) {
+                const selected = modelOptions.find(
+                    (option) => option.name === optionName,
+                );
+                if (!selected) {
+                    return;
+                }
+                selectedOptionName = selected.name;
+                apiEndpoint = normalizeApiEndpoint(selected.apiEndpoint);
+                model = selected.model;
+                systemPrompt = selected.systemPrompt;
+
+                if (
+                    modelSelectEl &&
+                    modelSelectEl.value !== selectedOptionName
+                ) {
+                    modelSelectEl.value = selectedOptionName;
+                }
+            }
+
+            function renderModelOptions() {
+                if (!modelSelectEl) {
+                    return;
+                }
+                modelSelectEl.innerHTML = "";
+                for (const option of modelOptions) {
+                    const optionEl = document.createElement("option");
+                    optionEl.value = option.name;
+                    optionEl.textContent = option.name;
+                    modelSelectEl.appendChild(optionEl);
+                }
+                if (selectedOptionName) {
+                    modelSelectEl.value = selectedOptionName;
+                }
+            }
+
+            function setStatus(text: string) {
+                if (statusEl) {
+                    statusEl.textContent = text;
+                }
+            }
+
+            function autoResizeInput() {
+                if (!inputEl) {
+                    return;
+                }
+                inputEl.style.height = "auto";
+                inputEl.style.height = `${Math.min(inputEl.scrollHeight, 160)}px`;
+            }
+
+            function getErrorMessage(error: unknown): string {
+                if (error instanceof Error) {
+                    return error.message;
+                }
+                return String(error);
+            }
+
+            function renderMarkdownToHtml(markdownText: string): string {
+                const rendered = marked.parse(markdownText, {
+                    gfm: true,
+                    breaks: true,
+                }) as string;
+                return DOMPurify.sanitize(rendered);
+            }
+
+            function extractModelNotFound(message: string): string | null {
+                const match = message.match(/model '([^']+)' not found/i);
+                return match?.[1] ?? null;
+            }
+
+            function isLocalOllamaEndpoint(endpoint: string): boolean {
+                return (
+                    endpoint.includes("127.0.0.1:11434") ||
+                    endpoint.includes("localhost:11434")
+                );
+            }
+
+            async function ensureLocalOllamaModelReady(): Promise<boolean> {
+                if (!isLocalOllamaEndpoint(apiEndpoint)) {
+                    return true;
+                }
+                try {
+                    const versionResponse = await fetch(
+                        "http://127.0.0.1:11434/api/version",
+                        {
+                            cache: "no-store",
+                        },
+                    );
+                    if (!versionResponse.ok) {
+                        throw new Error(`HTTP ${versionResponse.status}`);
+                    }
+
+                    return true;
+                } catch (error) {
+                    setStatus(
+                        `无法连接 Ollama 服务，将继续尝试请求：${getErrorMessage(error)}`,
+                    );
+                    return true;
+                }
+            }
+
+            function appendMessage(role: "user" | "ai", text: string) {
+                if (!messagesEl) {
+                    return;
+                }
+                if (emptyStateEl) {
+                    emptyStateEl.style.display = "none";
+                }
+                const row = document.createElement("article");
+                row.className = `message-row ${role}`;
+
+                const avatar = document.createElement("div");
+                avatar.className = "avatar";
+                avatar.textContent = role === "user" ? "你" : "AI";
+
+                const bubble = document.createElement("div");
+                bubble.className = "bubble";
+                bubble.innerHTML = renderMarkdownToHtml(text);
+
+                row.append(avatar, bubble);
+                messagesEl.appendChild(row);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+
+            function clearMessages() {
+                if (!messagesEl) {
+                    return;
+                }
+                messagesEl
+                    .querySelectorAll(".message-row")
+                    .forEach((messageNode) => messageNode.remove());
+                if (emptyStateEl) {
+                    emptyStateEl.style.display = "";
+                }
+            }
+
+            function renderConversation(messages: ChatHistoryMessage[]) {
+                clearMessages();
+                for (const message of messages) {
+                    appendMessage(
+                        message.role === "assistant" ? "ai" : "user",
+                        message.content,
+                    );
+                }
+            }
+
+            function sortRecordNames(names: string[]): string[] {
+                return [...names].sort((a, b) =>
+                    a === b ? 0 : a > b ? -1 : 1,
+                );
+            }
+
+            function renderHistoryOptions() {
+                if (!historySelectEl) {
+                    return;
+                }
+                historySelectEl.innerHTML = "";
+
+                const currentSessionOption = document.createElement("option");
+                currentSessionOption.value = "";
+                currentSessionOption.textContent = "当前会话";
+                historySelectEl.appendChild(currentSessionOption);
+
+                for (const recordName of recordNames) {
+                    const optionEl = document.createElement("option");
+                    optionEl.value = recordName;
+                    optionEl.textContent = recordName;
+                    historySelectEl.appendChild(optionEl);
+                }
+
+                if (
+                    currentRecordName &&
+                    recordNames.includes(currentRecordName)
+                ) {
+                    historySelectEl.value = currentRecordName;
+                } else {
+                    historySelectEl.value = "";
+                }
+            }
+
+            function normalizeRecordMessages(
+                payload: unknown,
+            ): ChatHistoryMessage[] {
+                if (!Array.isArray(payload)) {
+                    return [];
+                }
+
+                const normalized: ChatHistoryMessage[] = [];
+                for (const item of payload) {
+                    if (!item || typeof item !== "object") {
+                        continue;
+                    }
+                    const role = (item as { role?: unknown }).role;
+                    const content = (item as { content?: unknown }).content;
+                    if (
+                        (role === "user" || role === "assistant") &&
+                        typeof content === "string" &&
+                        content.trim()
+                    ) {
+                        normalized.push({ role, content });
+                    }
+                }
+
+                return normalized;
+            }
+
+            async function fetchRecordList() {
+                const response = await fetch(`${chatProxyUrl}?action=list`, {
+                    cache: "no-store",
+                });
+                if (!response.ok) {
+                    throw new Error(
+                        `读取记录列表失败：HTTP ${response.status}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    records?: unknown;
+                };
+                const records = Array.isArray(payload.records)
+                    ? payload.records
+                          .filter(
+                              (value): value is string =>
+                                  typeof value === "string",
+                          )
+                          .map((value) => value.trim())
+                          .filter((value) => value.length > 0)
+                    : [];
+
+                recordNames = sortRecordNames(records);
+                renderHistoryOptions();
+            }
+
+            async function loadRecordByName(recordName: string) {
+                const response = await fetch(
+                    `${chatProxyUrl}?action=load&name=${encodeURIComponent(recordName)}`,
+                    {
+                        cache: "no-store",
+                    },
+                );
+                if (!response.ok) {
+                    const detail = (await response.text()).trim();
+                    throw new Error(
+                        `读取记录失败：HTTP ${response.status}${detail ? ` - ${detail}` : ""}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    recordName?: unknown;
+                    messages?: unknown;
+                };
+
+                const loadedMessages = normalizeRecordMessages(
+                    payload.messages,
+                );
+                const loadedRecordName =
+                    typeof payload.recordName === "string"
+                        ? payload.recordName.trim()
+                        : recordName;
+
+                chatHistory.splice(0, chatHistory.length, ...loadedMessages);
+                currentRecordName = loadedRecordName;
+                if (
+                    currentRecordName &&
+                    !recordNames.includes(currentRecordName)
+                ) {
+                    recordNames = sortRecordNames([
+                        currentRecordName,
+                        ...recordNames,
+                    ]);
+                }
+                renderHistoryOptions();
+                renderConversation(chatHistory);
+            }
+
+            async function saveConversationRecord(): Promise<string> {
+                if (chatHistory.length === 0) {
+                    return "";
+                }
+
+                const response = await fetch(chatProxyUrl, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        recordName: currentRecordName || undefined,
+                        messages: chatHistory,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const detail = (await response.text()).trim();
+                    throw new Error(
+                        `保存记录失败：HTTP ${response.status}${detail ? ` - ${detail}` : ""}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    recordName?: unknown;
+                    records?: unknown;
+                };
+
+                const savedRecordName =
+                    typeof payload.recordName === "string"
+                        ? payload.recordName.trim()
+                        : "";
+                if (savedRecordName) {
+                    currentRecordName = savedRecordName;
+                }
+
+                const recordsFromServer = Array.isArray(payload.records)
+                    ? payload.records
+                          .filter(
+                              (value): value is string =>
+                                  typeof value === "string",
+                          )
+                          .map((value) => value.trim())
+                          .filter((value) => value.length > 0)
+                    : [];
+
+                if (recordsFromServer.length > 0) {
+                    recordNames = sortRecordNames(recordsFromServer);
+                } else if (
+                    currentRecordName &&
+                    !recordNames.includes(currentRecordName)
+                ) {
+                    recordNames = sortRecordNames([
+                        currentRecordName,
+                        ...recordNames,
+                    ]);
+                }
+                renderHistoryOptions();
+
+                return currentRecordName;
+            }
+
+            function parseReply(payload: unknown): string {
+                if (typeof payload === "string") {
+                    return payload;
+                }
+                if (payload && typeof payload === "object") {
+                    const data = payload as {
+                        reply?: unknown;
+                        message?: unknown;
+                        choices?: Array<{
+                            message?: { content?: unknown };
+                            text?: unknown;
+                        }>;
+                    };
+                    if (typeof data.reply === "string") {
+                        return data.reply;
+                    }
+                    if (typeof data.message === "string") {
+                        return data.message;
+                    }
+                    if (
+                        data.message &&
+                        typeof data.message === "object" &&
+                        typeof (data.message as { content?: unknown })
+                            .content === "string"
+                    ) {
+                        return (data.message as { content: string }).content;
+                    }
+                    const content = data.choices?.[0]?.message?.content;
+                    if (typeof content === "string") {
+                        return content;
+                    }
+                    const text = data.choices?.[0]?.text;
+                    if (typeof text === "string") {
+                        return text;
+                    }
+                }
+                try {
+                    return JSON.stringify(payload);
+                } catch {
+                    return "收到响应，但无法解析内容。";
+                }
+            }
+
+            async function loadApiConfig() {
+                if (!statusEl) {
+                    return;
+                }
+                try {
+                    const response = await fetch(configUrl, {
+                        cache: "no-store",
+                    });
+                    if (!response.ok) {
+                        throw new Error(
+                            `读取配置失败：HTTP ${response.status}`,
+                        );
+                    }
+                    const config = (await response.json()) as {
+                        apiEndpoint?: string;
+                        model?: string;
+                        selectedOptionName?: string;
+                        modelOptions?: Array<
+                            | string
+                            | {
+                                  name?: string;
+                                  label?: string;
+                                  model?: string;
+                                  apiEndpoint?: string;
+                                  systemPrompt?: string;
+                              }
+                        >;
+                        systemPrompt?: string;
+                    };
+                    const fallbackApiEndpoint = (
+                        config.apiEndpoint || ""
+                    ).trim();
+                    const fallbackModel = (config.model || "llama3.2").trim();
+                    const fallbackSystemPrompt = (
+                        config.systemPrompt || ""
+                    ).trim();
+
+                    apiEndpoint = normalizeApiEndpoint(fallbackApiEndpoint);
+                    model = fallbackModel;
+                    systemPrompt = fallbackSystemPrompt;
+
+                    modelOptions = normalizeModelOptions(
+                        Array.isArray(config.modelOptions)
+                            ? config.modelOptions
+                            : [],
+                        {
+                            apiEndpoint: fallbackApiEndpoint,
+                            model: fallbackModel,
+                            systemPrompt: fallbackSystemPrompt,
+                        },
+                    );
+
+                    const preferredOptionName = (
+                        config.selectedOptionName || ""
+                    ).trim();
+                    const matchedOptionName = modelOptions.find(
+                        (option) =>
+                            option.model === fallbackModel &&
+                            option.apiEndpoint === fallbackApiEndpoint,
+                    )?.name;
+
+                    selectedOptionName =
+                        modelOptions.find(
+                            (option) => option.name === preferredOptionName,
+                        )?.name ||
+                        matchedOptionName ||
+                        modelOptions[0]?.name ||
+                        "";
+
+                    if (selectedOptionName) {
+                        applySelectedOption(selectedOptionName);
+                    }
+                    renderModelOptions();
+
+                    if (apiEndpoint) {
+                        setStatus(
+                            `接口已就绪（${selectedOptionName || model}）`,
+                        );
+                        await ensureLocalOllamaModelReady();
+                    } else {
+                        setStatus("请先在 api.json 中填写 apiEndpoint。");
+                    }
+                } catch (error) {
+                    setStatus(`无法读取 api.json：${getErrorMessage(error)}`);
+                }
+            }
+
+            if (statusEl && messagesEl && formEl && inputEl && sendBtn) {
+                inputEl.addEventListener("input", autoResizeInput);
+                inputEl.addEventListener("keydown", (event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        formEl.requestSubmit();
+                    }
+                });
+                modelSelectEl?.addEventListener("change", async () => {
+                    applySelectedOption(modelSelectEl.value);
+                    setStatus(`已切换：${selectedOptionName}（${model}）`);
+                    await ensureLocalOllamaModelReady();
+                });
+                historySelectEl?.addEventListener("change", async () => {
+                    const selectedHistory = historySelectEl.value.trim();
+                    if (!selectedHistory) {
+                        currentRecordName = "";
+                        chatHistory.splice(0, chatHistory.length);
+                        renderConversation(chatHistory);
+                        setStatus("已切换到当前会话。可以开始新对话。");
+                        inputEl.focus();
+                        return;
+                    }
+
+                    sendBtn.disabled = true;
+                    try {
+                        await loadRecordByName(selectedHistory);
+                        setStatus(`已加载对话记录：${selectedHistory}`);
+                    } catch (error) {
+                        setStatus(`加载记录失败：${getErrorMessage(error)}`);
+                    } finally {
+                        sendBtn.disabled = false;
+                        inputEl.focus();
+                    }
+                });
+
+                formEl.addEventListener("submit", async (event) => {
+                    event.preventDefault();
+                    const message = inputEl.value.trim();
+                    if (!message) {
+                        return;
+                    }
+                    if (!apiEndpoint) {
+                        setStatus("请先在 api.json 中填写 apiEndpoint。");
+                        return;
+                    }
+
+                    await ensureLocalOllamaModelReady();
+
+                    appendMessage("user", message);
+                    chatHistory.push({ role: "user", content: message });
+                    inputEl.value = "";
+                    autoResizeInput();
+                    sendBtn.disabled = true;
+                    setStatus("AI 思考中...");
+
+                    try {
+                        const messages: Array<{
+                            role: "system" | "user" | "assistant";
+                            content: string;
+                        }> = [];
+                        if (systemPrompt) {
+                            messages.push({
+                                role: "system",
+                                content: systemPrompt,
+                            });
+                        }
+                        messages.push(...chatHistory);
+
+                        const response = await fetch(chatProxyUrl, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                selectedOptionName,
+                                messages,
+                                stream: false,
+                            }),
+                        });
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            const detail = errorText.trim();
+                            const isProxyNotFound =
+                                response.status === 404 &&
+                                detail.includes("Path: /project/chat");
+                            if (isProxyNotFound) {
+                                throw new Error(
+                                    "本地代理路由 /project/chat 不可用。请通过 `npm run dev` 或 `npm run preview` 启动 Astro，并访问终端显示的正确端口。",
+                                );
+                            }
+                            throw new Error(
+                                `请求失败：HTTP ${response.status}${detail ? ` - ${detail}` : ""}`,
+                            );
+                        }
+
+                        const contentType =
+                            response.headers.get("content-type") || "";
+                        const resolvedModelHeader =
+                            response.headers.get("x-resolved-model") || "";
+                        const payload = contentType.includes("application/json")
+                            ? await response.json()
+                            : await response.text();
+
+                        const aiReply = parseReply(payload);
+                        appendMessage("ai", aiReply);
+                        chatHistory.push({
+                            role: "assistant",
+                            content: aiReply,
+                        });
+                        const statusBase =
+                            resolvedModelHeader && resolvedModelHeader !== model
+                                ? `请求成功（实际模型：${resolvedModelHeader}）。`
+                                : "请求成功。";
+                        if (
+                            resolvedModelHeader &&
+                            resolvedModelHeader !== model
+                        ) {
+                            model = resolvedModelHeader;
+                        }
+
+                        try {
+                            const savedRecord = await saveConversationRecord();
+                            if (savedRecord) {
+                                setStatus(
+                                    `${statusBase} 已保存到记录：${savedRecord}。继续提问吧。`,
+                                );
+                            } else {
+                                setStatus(`${statusBase} 继续提问吧。`);
+                            }
+                        } catch (saveError) {
+                            setStatus(
+                                `${statusBase} 但保存记录失败：${getErrorMessage(saveError)}`,
+                            );
+                        }
+                    } catch (error) {
+                        const errorMessage = getErrorMessage(error);
+                        const notFoundModel =
+                            extractModelNotFound(errorMessage);
+                        let aiMessage = "";
+                        if (notFoundModel) {
+                            aiMessage = `模型 ${notFoundModel} 不存在，请先执行：ollama pull ${notFoundModel}`;
+                        } else {
+                            aiMessage = `请求出错：${errorMessage}`;
+                        }
+                        appendMessage("ai", aiMessage);
+                        chatHistory.push({
+                            role: "assistant",
+                            content: aiMessage,
+                        });
+                        try {
+                            await saveConversationRecord();
+                        } catch {}
+                        setStatus(
+                            "请求失败，请检查模型是否已安装、接口地址或跨域设置。",
+                        );
+                    } finally {
+                        sendBtn.disabled = false;
+                        inputEl.focus();
+                    }
+                });
+
+                renderHistoryOptions();
+                void (async () => {
+                    await loadApiConfig();
+                    try {
+                        await fetchRecordList();
+                    } catch (error) {
+                        setStatus(
+                            `读取历史记录失败：${getErrorMessage(error)}`,
+                        );
+                    }
+                    autoResizeInput();
+                })();
+            } else {
+                console.error("项目页初始化失败：缺少必要 DOM 节点。");
+            }
+        </script>
+    </body>
+</html>

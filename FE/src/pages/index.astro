@@ -1,0 +1,36 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import HomeContent from '../content/index/index.mdx';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+---
+
+<!doctype html>
+<html lang="zh_CN">
+	<head>
+		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+		<style>
+			main {
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				text-align: center;
+				min-height: 60vh;
+			}
+
+			.home-content {
+				max-width: 720px;
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<div class="home-content">
+				<HomeContent />
+			</div>
+		</main>
+		<Footer />
+	</body>
+</html>

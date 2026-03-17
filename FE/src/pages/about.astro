@@ -1,0 +1,19 @@
+---
+import { getEntry, render } from "astro:content";
+import Layout from "../layouts/BlogPost.astro";
+
+const entry = await getEntry("about", "about");
+if (!entry) return Astro.redirect("/404");
+
+const { Content } = await render(entry);
+const { title, description, pubDate, heroImage } = entry.data;
+---
+
+<Layout
+	title={title}
+	description={description}
+	pubDate={pubDate ?? new Date()}
+	heroImage={heroImage}
+>
+	<Content />
+</Layout>
