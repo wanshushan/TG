@@ -48,9 +48,9 @@ function resolveChatRecordsDir(): string {
     const cwd = process.cwd();
     const cwdName = path.basename(cwd).toLowerCase();
     if (cwdName === "fe") {
-        return path.resolve(cwd, "../RD/chat");
+        return path.resolve(cwd, "src/pages/project/chat");
     }
-    return path.resolve(cwd, "RD/chat");
+    return path.resolve(cwd, "FE/src/pages/project/chat");
 }
 
 const CHAT_RECORDS_DIR = resolveChatRecordsDir();

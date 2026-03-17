@@ -1,4 +1,9 @@
-![alt text](pjs3.png)
+---
+title: 'test'
+description: 'a test post'
+pubDate: 'Jun 19 2026'
+heroImage: 'pjs3.png'
+---
 
 # 灵·诊 项目说明
 

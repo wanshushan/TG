@@ -6,16 +6,24 @@
 
 :root {
 	--accent: #2337ff;
+	--accent-rgb: 35, 55, 255;
 	--accent-dark: #000d8a;
 	--black: 15, 18, 25;
 	--gray: 96, 115, 159;
 	--gray-light: 229, 233, 240;
 	--gray-dark: 34, 41, 57;
 	--gray-gradient: rgba(var(--gray-light), 50%), #fff;
+	--global-scrollbar-size: 1px;
+	--global-scrollbar-color: rgb(var(--gray-light));
 	--box-shadow:
 		0 2px 6px rgba(var(--gray), 25%), 0 8px 24px rgba(var(--gray), 33%),
 		0 16px 32px rgba(var(--gray), 33%);
+	/* OverlayScrollbars 颜色变量 */
+	--scrollbar-normal: rgba(0, 0, 0, 0.4);
+	--scrollbar-hover: rgba(0, 0, 0, 0.5);
+	--scrollbar-active: rgba(0, 0, 0, 0.6);
 }
+
 @font-face {
 	font-family: "Atkinson";
 	src: url("/fonts/atkinson-regular.woff") format("woff");
@@ -23,6 +31,7 @@
 	font-style: normal;
 	font-display: swap;
 }
+
 @font-face {
 	font-family: "Atkinson";
 	src: url("/fonts/atkinson-bold.woff") format("woff");
@@ -30,6 +39,7 @@
 	font-style: normal;
 	font-display: swap;
 }
+
 body {
 	font-family: "Atkinson", sans-serif;
 	margin: 0;
@@ -43,12 +53,16 @@ body {
 	font-size: 20px;
 	line-height: 1.7;
 }
+
+/* OverlayScrollbars 接管滚动条样式，不需要原生样式 */
+
 main {
 	width: 720px;
 	max-width: calc(100% - 2em);
 	margin: auto;
 	padding: 3em 1em;
 }
+
 h1,
 h2,
 h3,
@@ -59,78 +73,99 @@ h6 {
 	color: rgb(var(--black));
 	line-height: 1.2;
 }
+
 h1 {
 	font-size: 3.052em;
 }
+
 h2 {
 	font-size: 2.441em;
 }
+
 h3 {
 	font-size: 1.953em;
 }
+
 h4 {
 	font-size: 1.563em;
 }
+
 h5 {
 	font-size: 1.25em;
 }
+
 strong,
 b {
 	font-weight: 700;
 }
+
 a {
 	color: var(--accent);
 }
+
 a:hover {
 	color: var(--accent);
 }
+
 p {
 	margin-bottom: 1em;
 }
+
 .prose p {
 	margin-bottom: 2em;
 }
+
 textarea {
 	width: 100%;
 	font-size: 16px;
 }
+
 input {
 	font-size: 16px;
 }
+
 table {
 	width: 100%;
 }
+
 img {
 	max-width: 100%;
 	height: auto;
 	border-radius: 8px;
 }
+
 code {
 	padding: 2px 5px;
 	background-color: rgb(var(--gray-light));
 	border-radius: 2px;
 }
+
 pre {
 	padding: 1.5em;
 	border-radius: 8px;
 }
-pre > code {
+
+pre>code {
 	all: unset;
 }
+
 blockquote {
 	border-left: 4px solid var(--accent);
 	padding: 0 0 0 20px;
 	margin: 0;
 	font-size: 1.333em;
 }
+
 hr {
 	border: none;
 	border-top: 1px solid rgb(var(--gray-light));
 }
+
 @media (max-width: 720px) {
 	body {
 		font-size: 18px;
 	}
+
 	main {
 		padding: 1em;
 	}
@@ -152,4 +187,105 @@ hr {
 	clip-path: inset(50%);
 	/* added line to stop words getting smushed together (as they go onto separate lines and some screen readers do not understand line feeds as a space */
 	white-space: nowrap;
+}
+
+/* ===== OverlayScrollbars 自定义主题 (来自参考项目) ===== */
+/**
+ * 胶囊形滚动条样式
+ * - 默认厚度: 4px (0.25rem)
+ * - hover: 8px (0.5rem)
+ * - 支持 auto/dark/light 主题
+ */
+
+/* 基础主题颜色变量 */
+:root {
+	--scrollbar-bg-light: rgba(0, 0, 0, 0.4);
+	--scrollbar-bg-hover-light: rgba(0, 0, 0, 0.5);
+	--scrollbar-bg-active-light: rgba(0, 0, 0, 0.6);
+	--scrollbar-bg-dark: rgba(255, 255, 255, 0.4);
+	--scrollbar-bg-hover-dark: rgba(255, 255, 255, 0.5);
+	--scrollbar-bg-active-dark: rgba(255, 255, 255, 0.6);
+	--scrollbar-bg: var(--scrollbar-bg-light);
+	--scrollbar-bg-hover: var(--scrollbar-bg-hover-light);
+	--scrollbar-bg-active: var(--scrollbar-bg-active-light);
+	--os-handle-bg: var(--scrollbar-bg);
+	--os-handle-bg-hover: var(--scrollbar-bg-hover);
+	--os-handle-bg-active: var(--scrollbar-bg-active);
+}
+
+/* 基础滚动条样式 */
+.os-scrollbar {
+	transition: all 150ms ease-in-out;
+}
+
+/* 垂直滚动条 */
+.os-scrollbar-vertical {
+	width: 1px;
+	padding: 0.25rem 0.5rem;
+}
+
+.os-scrollbar-vertical:hover {
+	width: 2px;
+}
+
+.os-scrollbar-vertical .os-scrollbar-handle {
+	border-radius: 999px;
+	width: 0.25rem;
+	transition: width 150ms ease-in-out;
+}
+
+.os-scrollbar-vertical:hover .os-scrollbar-handle {
+	width: 0.5rem;
+}
+
+/* 水平滚动条 */
+.os-scrollbar-horizontal {
+	height: 1px;
+	padding: 0.5rem 0.25rem;
+}
+
+.os-scrollbar-horizontal:hover {
+	height: 2px;
+}
+
+.os-scrollbar-horizontal .os-scrollbar-handle {
+	border-radius: 999px;
+	height: 0.25rem;
+	transition: height 150ms ease-in-out;
+}
+
+.os-scrollbar-horizontal:hover .os-scrollbar-handle {
+	height: 0.5rem;
+}
+
+/* 滚动条句柄颜色 */
+.os-scrollbar-handle {
+	background-color: var(--os-handle-bg);
+}
+
+.os-scrollbar:hover .os-scrollbar-handle {
+	background-color: var(--os-handle-bg-hover);
+}
+
+.os-scrollbar.os-scrollbar-active .os-scrollbar-handle {
+	background-color: var(--os-handle-bg-active);
+}
+
+/* 主题变体 */
+.scrollbar-auto {
+	--os-handle-bg: var(--scrollbar-bg);
+	--os-handle-bg-hover: var(--scrollbar-bg-hover);
+	--os-handle-bg-active: var(--scrollbar-bg-active);
+}
+
+.scrollbar-dark {
+	--os-handle-bg: var(--scrollbar-bg-dark);
+	--os-handle-bg-hover: var(--scrollbar-bg-hover-dark);
+	--os-handle-bg-active: var(--scrollbar-bg-active-dark);
+}
+
+.scrollbar-light {
+	--os-handle-bg: var(--scrollbar-bg-light);
+	--os-handle-bg-hover: var(--scrollbar-bg-hover-light);
+	--os-handle-bg-active: var(--scrollbar-bg-active-light);
 }

@@ -1,6 +1,8 @@
 ---
-import { FOOTER_SOCIAL_LINKS } from "../consts";
+import { FOOTER_SOCIAL_LINKS } from "../config";
 import fa6BrandsIcons from "@iconify-json/fa6-brands/icons.json";
+import fa6SolidIcons from "@iconify-json/fa6-solid/icons.json";
+import fa6RegularIcons from "@iconify-json/fa6-regular/icons.json";
 
 const today = new Date();
 
@@ -18,15 +20,25 @@ type IconSet = {
 	height?: number;
 };
 
-const iconSet = fa6BrandsIcons as IconSet;
+const brandIconSet = fa6BrandsIcons as IconSet;
+const solidIconSet = fa6SolidIcons as IconSet;
+const regularIconSet = fa6RegularIcons as IconSet;
 
-function resolveFa6BrandIcon(iconName: string) {
-	const match = iconName.match(/^fa6-brands:(.+)$/);
+function resolveIcon(iconName: string) {
+	const match = iconName.match(/^(fa6-brands|fa6-solid|fa6-regular):(.+)$/);
 	if (!match) {
 		return null;
 	}
 
-	const icon = iconSet.icons[match[1]];
+	const [_, prefix, iconKey] = match;
+	const iconSet =
+		prefix === "fa6-brands"
+			? brandIconSet
+			: prefix === "fa6-solid"
+				? solidIconSet
+				: regularIconSet;
+
+	const icon = iconSet.icons[iconKey];
 	if (!icon) {
 		return null;
 	}
@@ -48,7 +60,7 @@ function resolveFa6BrandIcon(iconName: string) {
 	<div class="social-links">
 		{
 			FOOTER_SOCIAL_LINKS.map((link) => {
-				const icon = resolveFa6BrandIcon(link.icon);
+				const icon = resolveIcon(link.icon);
 				return (
 					<a
 						href={link.href}

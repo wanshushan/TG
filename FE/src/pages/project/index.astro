@@ -1,10 +1,11 @@
 ---
 import BaseHead from "../../components/BaseHead.astro";
 import Header from "../../components/Header.astro";
+import { siteConfig } from "../../config";
 ---
 
 <!doctype html>
-<html lang="zh-CN">
+<html lang={siteConfig.defaultLanguage} data-overlayscrollbars-initialize>
     <head>
         <BaseHead title="项目" description="AI 对话项目页" />
         <style>
@@ -149,8 +150,8 @@ import Header from "../../components/Header.astro";
                 margin: 0;
                 padding: 0.35rem 0.75rem;
                 border-radius: 999px;
-                border: 1px solid rgba(var(--accent), 0.35);
-                background: rgba(var(--accent), 0.12);
+                border: 1px solid rgba(var(--accent-rgb), 0.35);
+                background: rgba(var(--accent-rgb), 0.12);
                 font-size: 0.8rem;
                 line-height: 1.25;
                 color: var(--accent-dark);
@@ -205,8 +206,8 @@ import Header from "../../components/Header.astro";
                 flex-shrink: 0;
             }
             :global(.message-row.user .avatar) {
-                background: rgba(var(--accent), 0.15);
-                border-color: rgba(var(--accent), 0.35);
+                background: rgba(var(--accent-rgb), 0.15);
+                border-color: rgba(var(--accent-rgb), 0.35);
                 color: rgb(var(--accent-dark));
             }
             :global(.bubble) {
@@ -305,8 +306,8 @@ import Header from "../../components/Header.astro";
                 resize: none;
             }
             .chat-form textarea:focus {
-                outline: 2px solid rgba(var(--accent), 0.3);
-                border-color: rgba(var(--accent), 0.45);
+                outline: 2px solid rgba(var(--accent-rgb), 0.3);
+                border-color: rgba(var(--accent-rgb), 0.45);
             }
             .chat-form button {
                 height: 2.9rem;
@@ -385,9 +386,7 @@ import Header from "../../components/Header.astro";
                 <section id="messages" class="messages" aria-live="polite">
                     <div id="empty-state" class="empty-state">
                         <h2>新对话</h2>
-                        <p>
-                            -输入问题开始吧-
-                        </p>
+                        <p>-输入问题开始吧-</p>
                     </div>
                 </section>
                 <form id="chat-form" class="chat-form">

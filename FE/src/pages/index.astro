@@ -1,36 +1,56 @@
 ---
-import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
-import Header from '../components/Header.astro';
-import HomeContent from '../content/index/index.mdx';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import BaseHead from "../components/BaseHead.astro";
+import Footer from "../components/Footer.astro";
+import Header from "../components/Header.astro";
+import HomeContent from "../content/index/index.mdx";
+import { getMarkdownRenderConfig, siteConfig } from "../config";
+
+const markdownContentDesktopWidth =
+    getMarkdownRenderConfig().desktopContentWidth;
+const markdownFontScale = getMarkdownRenderConfig().fontScale;
 ---
 
 <!doctype html>
-<html lang="zh_CN">
-	<head>
-		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
-		<style>
-			main {
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				text-align: center;
-				min-height: 60vh;
-			}
+<html lang={siteConfig.defaultLanguage} data-overlayscrollbars-initialize>
+    <head>
+        <BaseHead
+            title={siteConfig.title}
+            description={siteConfig.description}
+        />
+        <style>
+            main {
+                width: calc(100% - 2em);
+                max-width: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                min-height: 60vh;
+            }
 
-			.home-content {
-				max-width: 720px;
-			}
-		</style>
-	</head>
-	<body>
-		<Header />
-		<main>
-			<div class="home-content">
-				<HomeContent />
-			</div>
-		</main>
-		<Footer />
-	</body>
+            .home-content {
+                max-width: 720px;
+                font-size: var(--markdown-font-scale);
+            }
+
+            @media (min-width: 721px) {
+                .home-content {
+                    width: var(--markdown-content-desktop-width);
+                    max-width: var(--markdown-content-desktop-width);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <Header />
+        <main>
+            <div
+                class="home-content"
+                style={`--markdown-content-desktop-width: ${markdownContentDesktopWidth}; --markdown-font-scale: ${markdownFontScale};`}
+            >
+                <HomeContent />
+            </div>
+        </main>
+        <Footer />
+    </body>
 </html>

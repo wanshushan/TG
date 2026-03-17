@@ -1,23 +1,120 @@
 ---
-import { SITE_TITLE } from "../consts";
+import { siteConfig, getNavigationItems, HEADER_SOCIAL_LINKS } from "../config";
 import HeaderLink from "./HeaderLink.astro";
+import fa6BrandsIcons from "@iconify-json/fa6-brands/icons.json";
+import fa6SolidIcons from "@iconify-json/fa6-solid/icons.json";
+import fa6RegularIcons from "@iconify-json/fa6-regular/icons.json";
+
+type IconData = {
+	body: string;
+	width?: number;
+	height?: number;
+	left?: number;
+	top?: number;
+};
+
+type IconSet = {
+	icons: Record<string, IconData>;
+	width?: number;
+	height?: number;
+};
+
+const brandIconSet = fa6BrandsIcons as IconSet;
+const solidIconSet = fa6SolidIcons as IconSet;
+const regularIconSet = fa6RegularIcons as IconSet;
+
+function resolveIcon(iconName?: string) {
+	if (!iconName) {
+		return null;
+	}
+
+	const match = iconName.match(/^(fa6-brands|fa6-solid|fa6-regular):(.+)$/);
+	if (!match) {
+		return null;
+	}
+
+	const [_, prefix, iconKey] = match;
+	const iconSet =
+		prefix === "fa6-brands"
+			? brandIconSet
+			: prefix === "fa6-solid"
+				? solidIconSet
+				: regularIconSet;
+	const icon = iconSet.icons[iconKey];
+
+	if (!icon) {
+		return null;
+	}
+
+	const left = icon.left ?? 0;
+	const top = icon.top ?? 0;
+	const width = icon.width ?? iconSet.width ?? 512;
+	const height = icon.height ?? iconSet.height ?? 512;
+
+	return {
+		body: icon.body,
+		viewBox: `${left} ${top} ${width} ${height}`,
+	};
+}
 ---
 
 <header>
 	<nav>
-		<h2><a href="/">{SITE_TITLE}</a></h2>
+		<h2><a href="/">{siteConfig.title}</a></h2>
 		<div class="internal-links">
-			<HeaderLink href="/">主页</HeaderLink>
-			<HeaderLink href="/blog">资料</HeaderLink>
-			<HeaderLink href="/project">项目</HeaderLink>
-			<HeaderLink href="/about">关于</HeaderLink>
+			{
+				getNavigationItems().map((item) => {
+					const icon = resolveIcon(item.icon);
+					return (
+						<HeaderLink href={item.href}>
+							<span class="link-content">
+								{icon && (
+									<svg
+										class="nav-icon-svg"
+										viewBox={icon.viewBox}
+										aria-hidden="true"
+										width="16"
+										height="16"
+									>
+										<g set:html={icon.body} />
+									</svg>
+								)}
+								<span>{item.label}</span>
+							</span>
+						</HeaderLink>
+					);
+				})
+			}
 		</div>
 		<div class="social-links">
-			<a
-				href="https://github.com/wanshushan"
-				target="_blank"
-				rel="noopener">GitHub</a
-			>
+			{
+				HEADER_SOCIAL_LINKS.map((link) => {
+					const icon = resolveIcon(link.icon);
+					return (
+						<a
+							href={link.href}
+							title={link.name}
+							target="_blank"
+							rel="noopener"
+						>
+							<span class="link-content">
+								{icon && (
+									<svg
+										class="social-icon-svg"
+										viewBox={icon.viewBox}
+										aria-hidden="true"
+										width="16"
+										height="16"
+									>
+										<g set:html={icon.body} />
+									</svg>
+								)}
+								<span>{link.name}</span>
+							</span>
+						</a>
+					);
+				})
+			}
 		</div>
 	</nav>
 </header>
@@ -55,6 +152,16 @@ import HeaderLink from "./HeaderLink.astro";
 	.social-links,
 	.social-links a {
 		display: flex;
+	}
+	.link-content {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+	.nav-icon-svg,
+	.social-icon-svg {
+		fill: currentColor;
+		flex-shrink: 0;
 	}
 	@media (max-width: 720px) {
 		.social-links {
