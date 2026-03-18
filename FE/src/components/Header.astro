@@ -1,5 +1,14 @@
 ---
-import { siteConfig, getNavigationItems, HEADER_SOCIAL_LINKS } from "../config";
+import {
+	siteConfig,
+	getNavigationItems,
+	HEADER_SOCIAL_LINKS,
+	getAuthStateStorageKey,
+	getAuthUsernameStorageKey,
+	getUserBridgeEndpoint,
+	getUserFallbackName,
+	getUserPagePath,
+} from "../config";
 import HeaderLink from "./HeaderLink.astro";
 import fa6BrandsIcons from "@iconify-json/fa6-brands/icons.json";
 import fa6SolidIcons from "@iconify-json/fa6-solid/icons.json";
@@ -56,6 +65,12 @@ function resolveIcon(iconName?: string) {
 		viewBox: `${left} ${top} ${width} ${height}`,
 	};
 }
+
+const headerUserBridgeEndpoint = getUserBridgeEndpoint();
+const headerUserFallbackName = getUserFallbackName();
+const headerUserPagePath = getUserPagePath();
+const headerAuthStateStorageKey = getAuthStateStorageKey();
+const headerAuthUsernameStorageKey = getAuthUsernameStorageKey();
 ---
 
 <header>
@@ -90,34 +105,123 @@ function resolveIcon(iconName?: string) {
 			{
 				HEADER_SOCIAL_LINKS.map((link) => {
 					const icon = resolveIcon(link.icon);
-					return (
-						<a
-							href={link.href}
-							title={link.name}
-							target="_blank"
-							rel="noopener"
-						>
-							<span class="link-content">
-								{icon && (
-									<svg
-										class="social-icon-svg"
-										viewBox={icon.viewBox}
-										aria-hidden="true"
-										width="16"
-										height="16"
-									>
-										<g set:html={icon.body} />
-									</svg>
-								)}
-								<span>{link.name}</span>
+					const isUserEntry = link.href === headerUserPagePath;
+					const content = (
+						<span class="link-content">
+							{icon && (
+								<svg
+									class="social-icon-svg"
+									viewBox={icon.viewBox}
+									aria-hidden="true"
+									width="16"
+									height="16"
+								>
+									<g set:html={icon.body} />
+								</svg>
+							)}
+							<span
+								data-header-username={
+									isUserEntry ? "true" : undefined
+								}
+							>
+								{link.name}
 							</span>
-						</a>
+						</span>
+					);
+
+					if (link.external) {
+						return (
+							<a
+								href={link.href}
+								title={link.name}
+								target="_blank"
+								rel="noopener"
+							>
+								{content}
+							</a>
+						);
+					}
+
+					return (
+						<HeaderLink href={link.href} title={link.name}>
+							{content}
+						</HeaderLink>
 					);
 				})
 			}
 		</div>
 	</nav>
 </header>
+<script
+	define:vars={{
+		headerUserBridgeEndpoint,
+		headerUserFallbackName,
+		headerAuthStateStorageKey,
+		headerAuthUsernameStorageKey,
+	}}
+>
+	function normalizeText(value) {
+		return typeof value === "string" ? value.trim() : "";
+	}
+
+	function persistAuthState(loggedIn, username) {
+		try {
+			window.localStorage.setItem(
+				headerAuthStateStorageKey,
+				loggedIn ? "true" : "false",
+			);
+
+			if (loggedIn && username) {
+				window.localStorage.setItem(
+					headerAuthUsernameStorageKey,
+					username,
+				);
+			} else {
+				window.localStorage.removeItem(headerAuthUsernameStorageKey);
+			}
+		} catch {
+			// 忽略存储异常，避免影响主流程
+		}
+	}
+
+	async function syncHeaderUsername() {
+		try {
+			const response = await fetch(headerUserBridgeEndpoint, {
+				cache: "no-store",
+			});
+			if (!response.ok) {
+				return;
+			}
+
+			const payload = await response.json();
+			const isLoggedIn = payload?.isLoggedIn === true;
+			const username =
+				normalizeText(payload?.username) || headerUserFallbackName;
+			persistAuthState(isLoggedIn, isLoggedIn ? username : "");
+
+			document
+				.querySelectorAll("[data-header-username='true']")
+				.forEach((node) => {
+					node.textContent = username;
+
+					const link = node.closest("a");
+					if (link) {
+						link.setAttribute("title", username);
+					}
+				});
+		} catch {
+			// 保持 fallback 文本，不额外抛错
+		}
+	}
+
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", syncHeaderUsername);
+	} else {
+		syncHeaderUsername();
+	}
+
+	document.addEventListener("astro:after-swap", syncHeaderUsername);
+</script>
 <style>
 	header {
 		margin: 0;

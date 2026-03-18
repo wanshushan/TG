@@ -1,0 +1,16 @@
+{
+  "admin": {
+    "passwordSalt": "84e21eee1246b28916754b082f4fb461",
+    "passwordHash": "6096580b19108cf7e39b4b6adc6eef696e76a6b250fb3a47199ece31dfdd8344",
+    "bio": "你好，admin！欢迎使用灵·诊。",
+    "avatar": "",
+    "links": []
+  },
+  "admin2": {
+    "passwordSalt": "b1de49b842169d67e3e405f65a69f6df",
+    "passwordHash": "c86149603d823f00de12affa0d23202e0a3c8d0fae1bc2d91a18f4282f64ac48",
+    "bio": "你好，admin2！欢迎使用灵·诊。",
+    "avatar": "pjs2.png",
+    "links": []
+  }
+}

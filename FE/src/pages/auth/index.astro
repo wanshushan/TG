@@ -1,0 +1,412 @@
+---
+import BaseHead from "../../components/BaseHead.astro";
+import Header from "../../components/Header.astro";
+import {
+    USER_PROFILE_CONFIG,
+    getAuthStateStorageKey,
+    getAuthUsernameStorageKey,
+    getUserPagePath,
+    siteConfig,
+} from "../../config";
+
+const loginEndpoint = USER_PROFILE_CONFIG.auth.loginEndpoint;
+const registerEndpoint = USER_PROFILE_CONFIG.auth.registerEndpoint;
+const userPagePath = getUserPagePath();
+const authStateStorageKey = getAuthStateStorageKey();
+const authUsernameStorageKey = getAuthUsernameStorageKey();
+
+const requestCookie = Astro.request.headers.get("cookie") || "";
+const statusHeaders: Record<string, string> = {
+    Accept: "application/json",
+};
+if (requestCookie) {
+    statusHeaders.Cookie = requestCookie;
+}
+
+try {
+    const statusResponse = await fetch(
+        USER_PROFILE_CONFIG.auth.statusEndpoint,
+        {
+            method: "GET",
+            credentials: "include",
+            headers: statusHeaders,
+        },
+    );
+
+    if (statusResponse.ok) {
+        const statusPayload = (await statusResponse.json()) as {
+            loggedIn?: unknown;
+        };
+
+        if (statusPayload?.loggedIn === true) {
+            return Astro.redirect(userPagePath);
+        }
+    }
+} catch {
+    // 状态接口异常时保持可访问登录页
+}
+---
+
+<!doctype html>
+<html lang={siteConfig.defaultLanguage} data-overlayscrollbars-initialize>
+    <head>
+        <BaseHead title="登录/注册" description="用户登录与注册" />
+        <style>
+            :global(body) {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            main.auth-page {
+                width: 90%;
+                margin: 0 5%;
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 1.2rem 0;
+                box-sizing: border-box;
+            }
+
+            .auth-shell {
+                width: min(980px, 100%);
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 1rem;
+            }
+
+            .auth-card {
+                border: 1px solid rgba(var(--gray), 0.35);
+                border-radius: 1rem;
+                background: white;
+                padding: 1rem;
+            }
+
+            .auth-card h1 {
+                margin: 0 0 0.75rem;
+                font-size: 1.2rem;
+            }
+
+            .auth-form {
+                display: flex;
+                flex-direction: column;
+                gap: 0.66rem;
+            }
+
+            .auth-form label {
+                display: flex;
+                flex-direction: column;
+                gap: 0.36rem;
+                font-size: 0.86rem;
+                color: rgba(var(--gray-dark), 0.84);
+            }
+
+            .auth-form input {
+                height: 2.4rem;
+                border: 1px solid rgba(var(--gray), 0.46);
+                border-radius: 0.7rem;
+                padding: 0 0.7rem;
+                font-size: 0.92rem;
+                color: rgb(var(--gray-dark));
+                background: white;
+            }
+
+            .auth-form input:focus {
+                outline: 2px solid rgba(var(--accent-rgb), 0.26);
+                border-color: rgba(var(--accent-rgb), 0.5);
+            }
+
+            .auth-btn {
+                margin-top: 0.3rem;
+                height: 2.4rem;
+                border: 1px solid rgba(var(--accent-rgb), 0.45);
+                border-radius: 999px;
+                background: rgba(var(--accent-rgb), 0.14);
+                color: var(--accent-dark);
+                font-size: 0.9rem;
+                font-weight: 700;
+                cursor: pointer;
+            }
+
+            .auth-btn:hover {
+                background: rgba(var(--accent-rgb), 0.2);
+            }
+
+            .auth-message {
+                margin: 0.65rem 0 0;
+                min-height: 1.3rem;
+                font-size: 0.84rem;
+                color: rgba(var(--gray-dark), 0.88);
+            }
+
+            .auth-message.error {
+                color: #b42318;
+            }
+
+            .auth-message.success {
+                color: #027a48;
+            }
+
+            @media (max-width: 920px) {
+                .auth-shell {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <Header />
+        <main class="auth-page">
+            <section class="auth-shell">
+                <article class="auth-card">
+                    <h1>登录</h1>
+                    <form id="login-form" class="auth-form">
+                        <label>
+                            用户名
+                            <input
+                                type="text"
+                                name="username"
+                                autocomplete="username"
+                                required
+                            />
+                        </label>
+                        <label>
+                            密码
+                            <input
+                                type="password"
+                                name="password"
+                                autocomplete="current-password"
+                                required
+                            />
+                        </label>
+                        <button class="auth-btn" type="submit">登录</button>
+                    </form>
+                    <p id="login-message" class="auth-message"></p>
+                </article>
+
+                <article class="auth-card">
+                    <h1>注册</h1>
+                    <form id="register-form" class="auth-form">
+                        <label>
+                            用户名
+                            <input
+                                type="text"
+                                name="username"
+                                autocomplete="username"
+                                required
+                            />
+                        </label>
+                        <label>
+                            密码
+                            <input
+                                type="password"
+                                name="password"
+                                autocomplete="new-password"
+                                required
+                            />
+                        </label>
+                        <label>
+                            确认密码
+                            <input
+                                type="password"
+                                name="confirmPassword"
+                                autocomplete="new-password"
+                                required
+                            />
+                        </label>
+                        <button class="auth-btn" type="submit">注册</button>
+                    </form>
+                    <p id="register-message" class="auth-message"></p>
+                </article>
+            </section>
+        </main>
+
+        <script
+            define:vars={{
+                loginEndpoint,
+                registerEndpoint,
+                userPagePath,
+                authStateStorageKey,
+                authUsernameStorageKey,
+            }}
+        >
+            function setMessage(targetId, text, type) {
+                const target = document.querySelector(targetId);
+                if (!(target instanceof HTMLParagraphElement)) {
+                    return;
+                }
+
+                target.textContent = text;
+                target.classList.remove("error", "success");
+                if (type) {
+                    target.classList.add(type);
+                }
+            }
+
+            async function postJson(url, payload) {
+                return fetch(url, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: "application/json",
+                    },
+                    body: JSON.stringify(payload),
+                });
+            }
+
+            function persistAuthState(loggedIn, username) {
+                try {
+                    window.localStorage.setItem(
+                        authStateStorageKey,
+                        loggedIn ? "true" : "false",
+                    );
+
+                    if (loggedIn && typeof username === "string" && username) {
+                        window.localStorage.setItem(
+                            authUsernameStorageKey,
+                            username,
+                        );
+                    } else {
+                        window.localStorage.removeItem(authUsernameStorageKey);
+                    }
+                } catch {
+                    // 忽略存储异常，避免影响主流程
+                }
+            }
+
+            function getInputValue(form, name) {
+                const input = form.elements.namedItem(name);
+                if (!(input instanceof HTMLInputElement)) {
+                    return "";
+                }
+
+                return input.value.trim();
+            }
+
+            const loginForm = document.querySelector("#login-form");
+            const registerForm = document.querySelector("#register-form");
+
+            if (loginForm instanceof HTMLFormElement) {
+                loginForm.addEventListener("submit", async (event) => {
+                    event.preventDefault();
+                    setMessage("#login-message", "", "");
+
+                    const username = getInputValue(loginForm, "username");
+                    const password = getInputValue(loginForm, "password");
+
+                    try {
+                        const response = await postJson(loginEndpoint, {
+                            username,
+                            password,
+                        });
+
+                        const payload = await response.json().catch(() => ({}));
+                        const message =
+                            typeof payload?.message === "string"
+                                ? payload.message
+                                : "";
+
+                        if (!response.ok) {
+                            setMessage(
+                                "#login-message",
+                                message ||
+                                    `登录失败（HTTP ${response.status}）`,
+                                "error",
+                            );
+                            return;
+                        }
+
+                        setMessage(
+                            "#login-message",
+                            message || "登录成功，正在跳转...",
+                            "success",
+                        );
+                        persistAuthState(
+                            true,
+                            typeof payload?.username === "string"
+                                ? payload.username
+                                : username,
+                        );
+                        window.location.href = userPagePath;
+                    } catch (error) {
+                        setMessage(
+                            "#login-message",
+                            `登录请求失败：${
+                                error instanceof Error
+                                    ? error.message
+                                    : String(error)
+                            }`,
+                            "error",
+                        );
+                    }
+                });
+            }
+
+            if (registerForm instanceof HTMLFormElement) {
+                registerForm.addEventListener("submit", async (event) => {
+                    event.preventDefault();
+                    setMessage("#register-message", "", "");
+
+                    const username = getInputValue(registerForm, "username");
+                    const password = getInputValue(registerForm, "password");
+                    const confirmPassword = getInputValue(
+                        registerForm,
+                        "confirmPassword",
+                    );
+
+                    if (password !== confirmPassword) {
+                        setMessage(
+                            "#register-message",
+                            "两次密码不一致",
+                            "error",
+                        );
+                        return;
+                    }
+
+                    try {
+                        const response = await postJson(registerEndpoint, {
+                            username,
+                            password,
+                            confirmPassword,
+                        });
+
+                        const payload = await response.json().catch(() => ({}));
+                        const message =
+                            typeof payload?.message === "string"
+                                ? payload.message
+                                : "";
+
+                        if (!response.ok) {
+                            setMessage(
+                                "#register-message",
+                                message ||
+                                    `注册失败（HTTP ${response.status}）`,
+                                "error",
+                            );
+                            return;
+                        }
+
+                        setMessage(
+                            "#register-message",
+                            message || "注册成功，请使用左侧表单登录",
+                            "success",
+                        );
+                        registerForm.reset();
+                    } catch (error) {
+                        setMessage(
+                            "#register-message",
+                            `注册请求失败：${
+                                error instanceof Error
+                                    ? error.message
+                                    : String(error)
+                            }`,
+                            "error",
+                        );
+                    }
+                });
+            }
+        </script>
+    </body>
+</html>

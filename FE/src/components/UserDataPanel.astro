@@ -1,0 +1,321 @@
+---
+import type { ResolvedUserChart } from "../lib/user-profile";
+
+interface Props {
+    charts: ResolvedUserChart[];
+}
+
+const { charts } = Astro.props;
+
+type ChartVM = {
+    id: string;
+    title: string;
+    xAxisName: string;
+    yAxisName: string;
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+    polylinePoints: string;
+    pointCoordinates: Array<{ x: number; y: number }>;
+};
+
+const SVG_WIDTH = 420;
+const SVG_HEIGHT = 220;
+const PADDING_LEFT = 44;
+const PADDING_RIGHT = 18;
+const PADDING_TOP = 18;
+const PADDING_BOTTOM = 36;
+
+function toFiniteNumber(value: unknown): number | undefined {
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return value;
+    }
+
+    if (typeof value === "string") {
+        const numeric = Number(value);
+        if (Number.isFinite(numeric)) {
+            return numeric;
+        }
+    }
+
+    return undefined;
+}
+
+function normalizeSeriesPoints(
+    points: unknown,
+): Array<{ x: number; y: number }> {
+    if (!Array.isArray(points)) {
+        return [];
+    }
+
+    const normalized: Array<{ x: number; y: number }> = [];
+    for (const point of points) {
+        if (!point || typeof point !== "object") {
+            continue;
+        }
+
+        const record = point as Record<string, unknown>;
+        const x = toFiniteNumber(record.x);
+        const y = toFiniteNumber(record.y);
+
+        if (x === undefined || y === undefined) {
+            continue;
+        }
+
+        normalized.push({ x, y });
+    }
+
+    if (normalized.length === 0) {
+        return [
+            { x: 0, y: 0 },
+            { x: 1, y: 0 },
+        ];
+    }
+
+    normalized.sort((a, b) => a.x - b.x);
+
+    if (normalized.length === 1) {
+        return [normalized[0], { x: normalized[0].x + 1, y: normalized[0].y }];
+    }
+
+    return normalized;
+}
+
+function formatNumber(value: number): string {
+    if (!Number.isFinite(value)) {
+        return "0";
+    }
+
+    if (Math.abs(value) >= 1000 || Number.isInteger(value)) {
+        return String(Math.round(value));
+    }
+
+    return value
+        .toFixed(2)
+        .replace(/\.00$/, "")
+        .replace(/(\.\d)0$/, "$1");
+}
+
+function toChartVM(chart: ResolvedUserChart): ChartVM {
+    const points = normalizeSeriesPoints(chart.points);
+
+    const minX = Math.min(...points.map((point) => point.x));
+    const maxX = Math.max(...points.map((point) => point.x));
+    const minY = Math.min(...points.map((point) => point.y));
+    const maxY = Math.max(...points.map((point) => point.y));
+
+    const xSpan = maxX - minX || 1;
+    const ySpan = maxY - minY || 1;
+
+    const innerWidth = SVG_WIDTH - PADDING_LEFT - PADDING_RIGHT;
+    const innerHeight = SVG_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
+
+    const mapped = points.map((point) => ({
+        x: PADDING_LEFT + ((point.x - minX) / xSpan) * innerWidth,
+        y: PADDING_TOP + (1 - (point.y - minY) / ySpan) * innerHeight,
+    }));
+
+    return {
+        id: chart.id,
+        title: chart.title,
+        xAxisName: chart.xAxisName,
+        yAxisName: chart.yAxisName,
+        minX,
+        maxX,
+        minY,
+        maxY,
+        polylinePoints: mapped
+            .map((point) => `${point.x},${point.y}`)
+            .join(" "),
+        pointCoordinates: mapped,
+    };
+}
+
+const chartViewModels = charts.slice(0, 4).map((chart) => toChartVM(chart));
+---
+
+<section class="chart-panel" aria-label="用户图表展示区域">
+    <div class="chart-frame">
+        <div class="chart-grid">
+            {
+                chartViewModels.map((chart) => (
+                    <article class="chart-card" data-chart-id={chart.id}>
+                        <header class="chart-head">
+                            <h2>{chart.title}</h2>
+                        </header>
+
+                        <div class="chart-canvas">
+                            <svg
+                                viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
+                                role="img"
+                                aria-label={`${chart.title} 折线图`}
+                            >
+                                <line
+                                    x1={PADDING_LEFT}
+                                    y1={PADDING_TOP}
+                                    x2={PADDING_LEFT}
+                                    y2={SVG_HEIGHT - PADDING_BOTTOM}
+                                    class="axis-line"
+                                />
+                                <line
+                                    x1={PADDING_LEFT}
+                                    y1={SVG_HEIGHT - PADDING_BOTTOM}
+                                    x2={SVG_WIDTH - PADDING_RIGHT}
+                                    y2={SVG_HEIGHT - PADDING_BOTTOM}
+                                    class="axis-line"
+                                />
+
+                                <polyline
+                                    points={chart.polylinePoints}
+                                    class="trend-line"
+                                    fill="none"
+                                />
+
+                                {chart.pointCoordinates.map((point) => (
+                                    <circle
+                                        cx={point.x}
+                                        cy={point.y}
+                                        r="3.2"
+                                        class="trend-point"
+                                    />
+                                ))}
+
+                                <text
+                                    x={PADDING_LEFT}
+                                    y={SVG_HEIGHT - 8}
+                                    class="tick-label"
+                                >
+                                    {formatNumber(chart.minX)}
+                                </text>
+                                <text
+                                    x={SVG_WIDTH - PADDING_RIGHT}
+                                    y={SVG_HEIGHT - 8}
+                                    text-anchor="end"
+                                    class="tick-label"
+                                >
+                                    {formatNumber(chart.maxX)}
+                                </text>
+                                <text
+                                    x={PADDING_LEFT - 8}
+                                    y={PADDING_TOP + 8}
+                                    text-anchor="end"
+                                    class="tick-label"
+                                >
+                                    {formatNumber(chart.maxY)}
+                                </text>
+                                <text
+                                    x={PADDING_LEFT - 8}
+                                    y={SVG_HEIGHT - PADDING_BOTTOM}
+                                    text-anchor="end"
+                                    class="tick-label"
+                                >
+                                    {formatNumber(chart.minY)}
+                                </text>
+                            </svg>
+
+                            <div class="x-axis-name">{chart.xAxisName}</div>
+                            <div class="y-axis-name">{chart.yAxisName}</div>
+                        </div>
+                    </article>
+                ))
+            }
+        </div>
+    </div>
+</section>
+
+<style>
+    .chart-panel {
+        min-width: 0;
+        min-height: 100%;
+    }
+
+    .chart-frame {
+        width: 100%;
+        min-height: 100%;
+        border: 1px solid rgba(var(--gray), 0.35);
+        border-radius: 1rem;
+        background: white;
+        box-sizing: border-box;
+        padding: 1rem;
+    }
+
+    .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem;
+    }
+
+    .chart-card {
+        border: 1px solid rgba(var(--gray), 0.3);
+        border-radius: 0.85rem;
+        background: rgba(var(--gray-light), 0.32);
+        padding: 0.72rem;
+    }
+
+    .chart-head h2 {
+        margin: 0;
+        font-size: 0.95rem;
+        line-height: 1.3;
+    }
+
+    .chart-canvas {
+        margin-top: 0.52rem;
+        position: relative;
+    }
+
+    .chart-canvas svg {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+
+    .axis-line {
+        stroke: rgba(var(--gray), 0.7);
+        stroke-width: 1.4;
+    }
+
+    .trend-line {
+        stroke: var(--accent);
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .trend-point {
+        fill: white;
+        stroke: var(--accent);
+        stroke-width: 1.5;
+    }
+
+    .tick-label {
+        font-size: 11px;
+        fill: rgba(var(--gray-dark), 0.78);
+    }
+
+    .x-axis-name,
+    .y-axis-name {
+        position: absolute;
+        font-size: 0.78rem;
+        color: rgba(var(--gray-dark), 0.8);
+        line-height: 1;
+        pointer-events: none;
+    }
+
+    .x-axis-name {
+        right: 0.6rem;
+        bottom: 0.45rem;
+    }
+
+    .y-axis-name {
+        left: 0.2rem;
+        top: 0.55rem;
+        writing-mode: vertical-rl;
+    }
+
+    @media (max-width: 980px) {
+        .chart-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>

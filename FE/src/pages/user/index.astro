@@ -1,0 +1,393 @@
+---
+import BaseHead from "../../components/BaseHead.astro";
+import Header from "../../components/Header.astro";
+import UserDataPanel from "../../components/UserDataPanel.astro";
+import {
+    USER_PROFILE_CONFIG,
+    getAuthStateStorageKey,
+    getAuthUsernameStorageKey,
+    getAuthPagePath,
+    getUserFallbackName,
+    siteConfig,
+} from "../../config";
+import { resolveUserDashboardData } from "../../lib/user-profile";
+import fa6RegularIcons from "@iconify-json/fa6-regular/icons.json";
+
+type IconData = {
+    body: string;
+    width?: number;
+    height?: number;
+    left?: number;
+    top?: number;
+};
+
+type IconSet = {
+    icons: Record<string, IconData>;
+    width?: number;
+    height?: number;
+};
+
+const regularIconSet = fa6RegularIcons as IconSet;
+
+function resolveIcon(iconName?: string) {
+    if (!iconName) {
+        return null;
+    }
+
+    const match = iconName.match(/^(fa6-brands|fa6-solid|fa6-regular):(.+)$/);
+    if (!match) {
+        return null;
+    }
+
+    const [_, prefix, iconKey] = match;
+    const iconSet = regularIconSet;
+    const icon = iconSet.icons[iconKey];
+
+    if (!icon) {
+        return null;
+    }
+
+    const left = icon.left ?? 0;
+    const top = icon.top ?? 0;
+    const width = icon.width ?? iconSet.width ?? 512;
+    const height = icon.height ?? iconSet.height ?? 512;
+
+    return {
+        body: icon.body,
+        viewBox: `${left} ${top} ${width} ${height}`,
+    };
+}
+
+const dashboardResult = await resolveUserDashboardData(fetch, {
+    cookieHeader: Astro.request.headers.get("cookie") || "",
+});
+const profile = dashboardResult.profile;
+const charts = dashboardResult.charts;
+const isLoggedIn = dashboardResult.isLoggedIn;
+const fallbackName = getUserFallbackName();
+const authPagePath = getAuthPagePath();
+const logoutEndpoint = USER_PROFILE_CONFIG.auth.logoutEndpoint;
+const authStateStorageKey = getAuthStateStorageKey();
+const authUsernameStorageKey = getAuthUsernameStorageKey();
+const avatarText = (profile.username.trim()[0] || "U").toUpperCase();
+const coverIcon = resolveIcon("fa6-regular:address-card");
+const profileBioText = isLoggedIn ? "欢迎使用 灵·诊" : "你尚未登录，请登录使用";
+---
+
+<!doctype html>
+<html lang={siteConfig.defaultLanguage} data-overlayscrollbars-initialize>
+    <head>
+        <BaseHead title="用户页" description="用户信息展示页" />
+        <style>
+            :global(body) {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            main.user-page {
+                width: 90%;
+                max-width: none;
+                margin: 0 5%;
+                padding: 1rem 0;
+                flex: 1;
+                min-height: calc(100vh - 72px);
+                box-sizing: border-box;
+            }
+
+            .user-shell {
+                display: grid;
+                grid-template-columns: minmax(260px, 24%) minmax(0, 76%);
+                gap: 1rem;
+                min-height: 100%;
+            }
+
+            .profile-card {
+                border: 1px solid rgba(var(--gray), 0.35);
+                border-radius: 1rem;
+                background: white;
+                padding: 0.85rem;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .avatar-link {
+                position: relative;
+                display: block;
+                border-radius: 0.85rem;
+                overflow: hidden;
+                margin-bottom: 0.85rem;
+                border: 1px solid rgba(var(--gray), 0.3);
+                text-decoration: none;
+            }
+
+            .avatar-image {
+                width: 100%;
+                aspect-ratio: 4 / 3;
+                object-fit: cover;
+                display: block;
+                background: rgba(var(--gray-light), 0.8);
+            }
+
+            .avatar-fallback {
+                width: 100%;
+                aspect-ratio: 4 / 3;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 2.2rem;
+                font-weight: 700;
+                color: rgb(var(--gray-dark));
+                background: rgba(var(--gray-light), 0.9);
+            }
+
+            .avatar-overlay {
+                position: absolute;
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(var(--black), 0.2);
+                color: white;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+            }
+
+            .avatar-link:hover .avatar-overlay {
+                opacity: 1;
+            }
+
+            .avatar-overlay svg {
+                fill: currentColor;
+            }
+
+            .profile-content {
+                padding: 0 0.45rem;
+            }
+
+            .profile-name {
+                margin: 0;
+                text-align: center;
+                font-size: 1.1rem;
+                line-height: 1.35;
+            }
+
+            .profile-divider {
+                height: 0.25rem;
+                width: 1.4rem;
+                border-radius: 999px;
+                margin: 0.6rem auto;
+                background: var(--accent);
+            }
+
+            .profile-bio {
+                margin: 0;
+                text-align: center;
+                font-size: 0.9rem;
+                line-height: 1.5;
+                color: rgba(var(--gray-dark), 0.82);
+                min-height: 2.1rem;
+            }
+
+            .auth-action {
+                margin-top: 0.95rem;
+                display: flex;
+                justify-content: center;
+            }
+
+            .auth-button {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 8.6rem;
+                height: 2.35rem;
+                padding: 0 1rem;
+                border-radius: 999px;
+                border: 1px solid rgba(var(--accent-rgb), 0.42);
+                background: rgba(var(--accent-rgb), 0.12);
+                color: var(--accent-dark);
+                text-decoration: none;
+                transition: background-color 0.2s ease;
+                cursor: pointer;
+                font-size: 0.9rem;
+                font-weight: 700;
+            }
+
+            .auth-button:hover {
+                background: rgba(var(--accent-rgb), 0.2);
+            }
+
+            .auth-button.logout {
+                border-color: rgba(var(--gray), 0.45);
+                color: rgb(var(--gray-dark));
+                background: rgba(var(--gray-light), 0.8);
+            }
+
+            .auth-button.logout:hover {
+                background: rgba(var(--gray-light), 1);
+            }
+
+            @media (max-width: 900px) {
+                main.user-page {
+                    width: 92%;
+                    margin: 0 4%;
+                    min-height: auto;
+                }
+
+                .user-shell {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <Header />
+        <main class="user-page">
+            <section class="user-shell">
+                <aside class="profile-card">
+                    <a
+                        class="avatar-link"
+                        href="/about"
+                        aria-label="查看用户相关页面"
+                    >
+                        {
+                            profile.avatar ? (
+                                <img
+                                    class="avatar-image"
+                                    id="user-avatar"
+                                    src={profile.avatar}
+                                    alt="用户头像"
+                                    loading="lazy"
+                                />
+                            ) : (
+                                <div
+                                    class="avatar-fallback"
+                                    id="user-avatar-fallback"
+                                >
+                                    {avatarText}
+                                </div>
+                            )
+                        }
+                        <div class="avatar-overlay" aria-hidden="true">
+                            {
+                                coverIcon && (
+                                    <svg
+                                        viewBox={coverIcon.viewBox}
+                                        width="52"
+                                        height="52"
+                                    >
+                                        <g set:html={coverIcon.body} />
+                                    </svg>
+                                )
+                            }
+                        </div>
+                    </a>
+
+                    <div class="profile-content">
+                        <h1 class="profile-name" id="user-name">
+                            {profile.username || fallbackName}
+                        </h1>
+                        <div class="profile-divider" aria-hidden="true"></div>
+                        <p class="profile-bio" id="user-bio">
+                            {profileBioText}
+                        </p>
+                        <div class="auth-action">
+                            {
+                                isLoggedIn ? (
+                                    <button
+                                        class="auth-button logout"
+                                        id="logout-button"
+                                        type="button"
+                                    >
+                                        退出登录
+                                    </button>
+                                ) : (
+                                    <a class="auth-button" href={authPagePath}>
+                                        登录/注册
+                                    </a>
+                                )
+                            }
+                        </div>
+                    </div>
+                </aside>
+
+                <UserDataPanel charts={charts} />
+            </section>
+        </main>
+        <script
+            define:vars={{
+                isLoggedIn,
+                logoutEndpoint,
+                authPagePath,
+                authStateStorageKey,
+                authUsernameStorageKey,
+                currentUsername: profile.username || fallbackName,
+            }}
+        >
+            function persistAuthState(loggedIn, username) {
+                try {
+                    window.localStorage.setItem(
+                        authStateStorageKey,
+                        loggedIn ? "true" : "false",
+                    );
+
+                    if (loggedIn && typeof username === "string" && username) {
+                        window.localStorage.setItem(
+                            authUsernameStorageKey,
+                            username,
+                        );
+                    } else {
+                        window.localStorage.removeItem(authUsernameStorageKey);
+                    }
+                } catch {
+                    // 忽略存储异常，避免影响主流程
+                }
+            }
+
+            persistAuthState(isLoggedIn, currentUsername);
+
+            async function handleLogout() {
+                if (!isLoggedIn) {
+                    return;
+                }
+
+                const logoutButton = document.querySelector("#logout-button");
+                if (!(logoutButton instanceof HTMLButtonElement)) {
+                    return;
+                }
+
+                logoutButton.disabled = true;
+                const originalText = logoutButton.textContent;
+                logoutButton.textContent = "退出中...";
+
+                try {
+                    const response = await fetch(logoutEndpoint, {
+                        method: "POST",
+                        credentials: "include",
+                        headers: {
+                            Accept: "application/json",
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    persistAuthState(false, "");
+                    window.location.href = authPagePath;
+                } catch {
+                    logoutButton.disabled = false;
+                    logoutButton.textContent = originalText || "退出登录";
+                    window.alert("退出登录失败，请稍后重试");
+                }
+            }
+
+            if (isLoggedIn) {
+                const logoutButton = document.querySelector("#logout-button");
+                if (logoutButton instanceof HTMLButtonElement) {
+                    logoutButton.addEventListener("click", handleLogout);
+                }
+            }
+        </script>
+    </body>
+</html>

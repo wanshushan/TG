@@ -145,12 +145,232 @@ export type SocialLink = {
     name: string;
     href: string;
     icon?: IconifyFa6Icon; // 可选的 Iconify 图标标识
+    external?: boolean;
 };
+
+function normalizePublicEnvValue(value: unknown): string {
+    return typeof value === "string" ? value.trim() : "";
+}
+
+export const AUTH_STATE_STORAGE_KEY =
+    normalizePublicEnvValue(import.meta.env.PUBLIC_AUTH_STATE_STORAGE_KEY) ||
+    "LINGZHEN_AUTH_LOGGED_IN";
+
+export const AUTH_USERNAME_STORAGE_KEY =
+    normalizePublicEnvValue(import.meta.env.PUBLIC_AUTH_USERNAME_STORAGE_KEY) ||
+    "LINGZHEN_AUTH_USERNAME";
+
+export const AUTH_DEFAULT_LOGGED_IN =
+    normalizePublicEnvValue(import.meta.env.PUBLIC_AUTH_DEFAULT_LOGGED_IN).toLowerCase() ===
+    "true";
+
+export function getAuthStateStorageKey(): string {
+    return AUTH_STATE_STORAGE_KEY;
+}
+
+export function getAuthUsernameStorageKey(): string {
+    return AUTH_USERNAME_STORAGE_KEY;
+}
+
+// ===== 用户资料配置（登录后走 API，未登录走本地） =====
+
+export type UserProfileLink = {
+    name: string;
+    href: string;
+    icon?: IconifyFa6Icon;
+};
+
+export type UserProfile = {
+    username?: string;
+    bio?: string;
+    avatar?: string;
+    links: UserProfileLink[];
+};
+
+export type UserChartPoint = {
+    x: number;
+    y: number;
+};
+
+export type UserChartDefinition = {
+    id: string;
+    title: string;
+    xAxisName: string;
+    yAxisName: string;
+    fallbackPoints: UserChartPoint[];
+};
+
+export const USER_CHART_DEFINITIONS: UserChartDefinition[] = [
+    {
+        id: "chart-1",
+        title: "趋势图 1",
+        xAxisName: "时间",
+        yAxisName: "指标A",
+        fallbackPoints: [
+            { x: 1, y: 10 },
+            { x: 2, y: 10 },
+            { x: 3, y: 10 },
+            { x: 4, y: 10 },
+            { x: 5, y: 10 },
+            { x: 6, y: 10 },
+        ],
+    },
+    {
+        id: "chart-2",
+        title: "趋势图 2",
+        xAxisName: "时间",
+        yAxisName: "指标B",
+        fallbackPoints: [
+            { x: 1, y: 10 },
+            { x: 2, y: 10 },
+            { x: 3, y: 10 },
+            { x: 4, y: 10 },
+            { x: 5, y: 10 },
+            { x: 6, y: 10 },
+        ],
+    },
+    {
+        id: "chart-3",
+        title: "趋势图 3",
+        xAxisName: "时间",
+        yAxisName: "指标C",
+        fallbackPoints: [
+            { x: 1, y: 10 },
+            { x: 2, y: 10 },
+            { x: 3, y: 10 },
+            { x: 4, y: 10 },
+            { x: 5, y: 10 },
+            { x: 6, y: 10 },
+        ],
+    },
+    {
+        id: "chart-4",
+        title: "趋势图 4",
+        xAxisName: "时间",
+        yAxisName: "指标D",
+        fallbackPoints: [
+            { x: 1, y: 10 },
+            { x: 2, y: 10 },
+            { x: 3, y: 10 },
+            { x: 4, y: 10 },
+            { x: 5, y: 10 },
+            { x: 6, y: 10 },
+        ],
+    },
+];
+
+export type UserApiSourceConfig = {
+    endpoint: string;
+    timeoutMs: number;
+    mapping: {
+        usernameField: string;
+        bioField: string;
+        avatarField: string;
+        linksField: string;
+        chartsField: string;
+        chartIdField: string;
+        chartPointsField: string;
+        pointXField: string;
+        pointYField: string;
+    };
+};
+
+export type UserAuthApiConfig = {
+    statusEndpoint: string;
+    loginEndpoint: string;
+    registerEndpoint: string;
+    logoutEndpoint: string;
+    timeoutMs: number;
+    mapping: {
+        loggedInField: string;
+        usernameField: string;
+        messageField: string;
+    };
+};
+
+export type UserProfileDataConfig = {
+    fallbackUsername: string;
+    userPagePath: string;
+    authPagePath: string;
+    bridgeEndpoint: string;
+    file: UserProfile;
+    api: UserApiSourceConfig;
+    auth: UserAuthApiConfig;
+};
+
+export const USER_PROFILE_CONFIG: UserProfileDataConfig = {
+    fallbackUsername: "User",
+    userPagePath: "/user",
+    authPagePath: "/auth",
+    bridgeEndpoint: "/user/api.json",
+    file: {
+        username: "User",
+        bio: "你尚未登录，请登录使用",
+        avatar: "",
+        links: FOOTER_SOCIAL_LINKS.map((item) => ({
+            name: item.name,
+            href: item.href,
+            icon: item.icon,
+        })),
+    },
+    api: {
+        endpoint: "http://127.0.0.1:3000/api/user/profile",
+        timeoutMs: 5000,
+        mapping: {
+            usernameField: "username",
+            bioField: "bio",
+            avatarField: "avatar",
+            linksField: "links",
+            chartsField: "charts",
+            chartIdField: "id",
+            chartPointsField: "points",
+            pointXField: "x",
+            pointYField: "y",
+        },
+    },
+    auth: {
+        statusEndpoint: "http://127.0.0.1:3000/api/auth/status",
+        loginEndpoint: "http://127.0.0.1:3000/api/auth/login",
+        registerEndpoint: "http://127.0.0.1:3000/api/auth/register",
+        logoutEndpoint: "http://127.0.0.1:3000/api/auth/logout",
+        timeoutMs: 5000,
+        mapping: {
+            loggedInField: "loggedIn",
+            usernameField: "username",
+            messageField: "message",
+        },
+    },
+};
+
+function normalizeNonEmptyString(value?: string): string {
+    return (value || "").trim();
+}
+
+export function getUserFallbackName(): string {
+    return normalizeNonEmptyString(USER_PROFILE_CONFIG.fallbackUsername) || "User";
+}
+
+export function getConfiguredUsername(): string {
+    return normalizeNonEmptyString(USER_PROFILE_CONFIG.file.username) || getUserFallbackName();
+}
+
+export function getUserBridgeEndpoint(): string {
+    return normalizeNonEmptyString(USER_PROFILE_CONFIG.bridgeEndpoint) || "/user/api.json";
+}
+
+export function getUserPagePath(): string {
+    return normalizeNonEmptyString(USER_PROFILE_CONFIG.userPagePath) || "/user";
+}
+
+export function getAuthPagePath(): string {
+    return normalizeNonEmptyString(USER_PROFILE_CONFIG.authPagePath) || "/auth";
+}
 
 export const HEADER_SOCIAL_LINKS: SocialLink[] = [
     {
-        name: 'GitHub',
-        href: 'https://github.com/wanshushan',
+        name: getConfiguredUsername(),
+        href: getUserPagePath(),
         icon: 'fa6-regular:address-card',
+        external: false,
     },
 ];
