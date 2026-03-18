@@ -60,7 +60,7 @@
     ```   powershell
     cd RD
     conda activate RD（这里改成你的环境名）
-    uvicorn main:app --host 127.0.0.1 --port 3000 -reload
+    uvicorn main:app --host 127.0.0.1 --port 3000 
     ```
 - 再启动FE
 
