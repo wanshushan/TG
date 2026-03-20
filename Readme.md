@@ -49,7 +49,7 @@
     ```   powershell
     conda create -n RD python=3.13 -y
     conda activate RD
-    conda env create -f freeze.yml
+    conda env update -f freeze.yml --prune
     ```
 - python版本3.13，模型训练部分请确保与后端环境一致，避免依赖冲突
 
