@@ -47,7 +47,7 @@
 - 使用 Conda 创建独立环境，命名为 `RD`
 - 安装依赖(依赖文件freeze.yml)：
     ```   powershell
-    conda create -n RD python=3.13 -y
+    conda create -n RD python=3.13 -y // 自己根据情况判断要不要重新创建
     conda activate RD
     conda env update -f freeze.yml --prune
     ```
