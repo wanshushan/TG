@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
+from chat.chat_wz import router as chat_router
 from login.login import router as login_router
 
 APP_NAME = "RD Auth Service"
@@ -42,6 +43,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(login_router)
+    app.include_router(chat_router)
     return app
 
 

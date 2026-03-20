@@ -118,7 +118,7 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     {
         order: NavigationItemOrder.PROJECT,
         href: '/project',
-        label: '项目',
+        label: '问诊',
         icon: 'fa6-regular:message',
     },
     {

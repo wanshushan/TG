@@ -45,8 +45,13 @@
 
 ### RD（fastapi）
 - 使用 Conda 创建独立环境，命名为 `RD`
-- 安装依赖：`fastapi`, `uvicorn`, `itsdangerous`
-- python版本3.13
+- 安装依赖(依赖文件freeze.yml)：
+    ```   powershell
+    conda create -n RD python=3.13 -y
+    conda activate RD
+    conda env create -f freeze.yml
+    ```
+- python版本3.13，模型训练部分请确保与后端环境一致，避免依赖冲突
 
 ### FE（astro）
 
