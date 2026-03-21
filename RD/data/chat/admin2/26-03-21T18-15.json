@@ -1,0 +1,15 @@
+{
+  "recordName": "26-03-21T18:15",
+  "owner": "admin2",
+  "updatedAt": "2026-03-21T18:15:11.750607",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你好"
+    },
+    {
+      "role": "assistant",
+      "content": "主人你好呀~我是你的小猫咪哦！(=^･ω･^=)喵~有什么需要我帮忙的吗？"
+    }
+  ]
+}

@@ -7,8 +7,15 @@ import { defineConfig } from 'astro/config';
 
 // https://astro.build/config
 export default defineConfig({
-	site: 'https://example.com',
+	site: 'https://tg.wanshushan.top/',
 	output: 'server',
 	adapter: node({ mode: 'standalone' }),
 	integrations: [mdx(), sitemap()],
+	vite: {
+		server: {
+			allowedHosts: ['tg.wanshushan.top']  // 替换为你的域名
+		}
+	}
 });
+
+

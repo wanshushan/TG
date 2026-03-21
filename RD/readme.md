@@ -39,13 +39,37 @@ uvicorn main:app --host 127.0.0.1 --port 3000 --reload
 ## 可选环境变量
 
 - `RD_SESSION_SECRET`：Session 签名密钥（建议在生产环境设置）
-- `RD_ALLOWED_ORIGINS`：允许跨域来源，逗号分隔
+- `RD_ALLOWED_ORIGINS`：允许跨域来源，逗号分隔（请写 Origin 形式，不要带路径和结尾 `/`）
+
+## 配置文件（推荐）
+
+- `RD/config.json`：后端统一配置源（域名白名单、Session、启动地址）
+- 若同时设置环境变量：`RD_SESSION_SECRET` 与 `RD_ALLOWED_ORIGINS` 会覆盖 `config.json` 对应项
+
+示例：
+
+```json
+{
+	"server": { "host": "127.0.0.1", "port": 3000 },
+	"cors": {
+		"allowedOrigins": [
+			"http://127.0.0.1:4321",
+			"https://tg.wanshushan.top"
+		]
+	},
+	"session": {
+		"cookieName": "rd_session",
+		"sameSite": "lax",
+		"httpsOnly": false
+	}
+}
+```
 
 示例：
 
 ```powershell
 $env:RD_SESSION_SECRET = "replace-with-a-strong-secret"
-$env:RD_ALLOWED_ORIGINS = "http://127.0.0.1:4321,http://127.0.0.1:3000"
+$env:RD_ALLOWED_ORIGINS = "http://127.0.0.1:4321,http://127.0.0.1:3000,https://tg.wanshushan.top"
 ```
 
 ## 接口清单

@@ -14,6 +14,18 @@ const registerEndpoint = USER_PROFILE_CONFIG.auth.registerEndpoint;
 const userPagePath = getUserPagePath();
 const authStateStorageKey = getAuthStateStorageKey();
 const authUsernameStorageKey = getAuthUsernameStorageKey();
+const requestOrigin = new URL(Astro.request.url).origin;
+const internalOrigin =
+    process.env.FE_INTERNAL_ORIGIN || "http://127.0.0.1:4321";
+const statusBaseOrigin = internalOrigin || requestOrigin;
+const statusEndpoint = /^https?:\/\//i.test(
+    USER_PROFILE_CONFIG.auth.statusEndpoint,
+)
+    ? USER_PROFILE_CONFIG.auth.statusEndpoint
+    : new URL(
+          USER_PROFILE_CONFIG.auth.statusEndpoint,
+          statusBaseOrigin,
+      ).toString();
 
 const requestCookie = Astro.request.headers.get("cookie") || "";
 const statusHeaders: Record<string, string> = {
@@ -24,14 +36,11 @@ if (requestCookie) {
 }
 
 try {
-    const statusResponse = await fetch(
-        USER_PROFILE_CONFIG.auth.statusEndpoint,
-        {
-            method: "GET",
-            credentials: "include",
-            headers: statusHeaders,
-        },
-    );
+    const statusResponse = await fetch(statusEndpoint, {
+        method: "GET",
+        credentials: "include",
+        headers: statusHeaders,
+    });
 
     if (statusResponse.ok) {
         const statusPayload = (await statusResponse.json()) as {

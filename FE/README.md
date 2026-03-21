@@ -4,6 +4,19 @@
 - 大部分配置可以在`src/config.ts`中进行调整
 - 内容主要放在`src/content`目录下，使用md或mdx格式
 
+## SSR 环境变量（Tunnel 场景）
+
+- `FE_INTERNAL_ORIGIN`：SSR 阶段访问同站 `/api/*` 的内部基地址。
+- 默认值：`http://127.0.0.1:4321`
+- 通过 Cloudflare Tunnel 暴露站点时，建议显式设置，避免 SSR 请求走公网域名导致登录态误判。
+
+PowerShell 示例：
+
+```powershell
+$env:FE_INTERNAL_ORIGIN = "http://127.0.0.1:4321"
+pnpm dev
+```
+
 ## 前端文件结构：
 
 ```text

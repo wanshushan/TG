@@ -491,9 +491,8 @@ import { siteConfig } from "../../config";
             const temperatureInputEl = document.querySelector(
                 "#temperature-input",
             ) as HTMLInputElement | null;
-            const backendBaseUrl = `${window.location.protocol}//${window.location.hostname}:3000`;
-            const configUrl = `${backendBaseUrl}/api/chat/config`;
-            const chatProxyUrl = `${backendBaseUrl}/api/chat`;
+            const configUrl = "/api/chat/config";
+            const chatProxyUrl = "/api/chat";
             let apiEndpoint = "";
             let model = "llama3.2";
             let selectedOptionName = "";

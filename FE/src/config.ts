@@ -314,7 +314,7 @@ export const USER_PROFILE_CONFIG: UserProfileDataConfig = {
         })),
     },
     api: {
-        endpoint: "http://127.0.0.1:3000/api/user/profile",
+        endpoint: "/api/user/profile",
         timeoutMs: 5000,
         mapping: {
             usernameField: "username",
@@ -329,10 +329,10 @@ export const USER_PROFILE_CONFIG: UserProfileDataConfig = {
         },
     },
     auth: {
-        statusEndpoint: "http://127.0.0.1:3000/api/auth/status",
-        loginEndpoint: "http://127.0.0.1:3000/api/auth/login",
-        registerEndpoint: "http://127.0.0.1:3000/api/auth/register",
-        logoutEndpoint: "http://127.0.0.1:3000/api/auth/logout",
+        statusEndpoint: "/api/auth/status",
+        loginEndpoint: "/api/auth/login",
+        registerEndpoint: "/api/auth/register",
+        logoutEndpoint: "/api/auth/logout",
         timeoutMs: 5000,
         mapping: {
             loggedInField: "loggedIn",

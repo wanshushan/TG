@@ -3,7 +3,7 @@ title: "关于"
 description: "关于本站"
 pubDate: 2026-03-17
 ---
-![alt text](../../../../pjs3.png)
+![alt text](share.png)
 # 这是 灵·诊 前端
 
 ## 关于项目前端架构

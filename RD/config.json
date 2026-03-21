@@ -1,0 +1,28 @@
+{
+    "appName": "RD Auth Service",
+    "server": {
+        "host": "127.0.0.1",
+        "port": 3000
+    },
+    "cors": {
+        "allowedOrigins": [
+            "http://127.0.0.1:4321",
+            "http://127.0.0.1:3000",
+            "https://tg.wanshushan.top"
+        ],
+        "allowCredentials": true,
+        "allowMethods": [
+            "*"
+        ],
+        "allowHeaders": [
+            "*"
+        ]
+    },
+    "session": {
+        "cookieName": "rd_session",
+        "secret": "rd-dev-secret-change-me",
+        "sameSite": "lax",
+        "httpsOnly": false,
+        "maxAgeSeconds": 604800
+    }
+}

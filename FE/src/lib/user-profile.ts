@@ -48,7 +48,44 @@ type AuthStatusResult = {
 
 export type ResolveUserDataOptions = {
     cookieHeader?: string;
+    requestOrigin?: string;
+    internalOrigin?: string;
 };
+
+function resolveEndpointUrl(
+    endpoint: string,
+    requestOrigin?: string,
+    internalOrigin?: string,
+): string {
+    const normalizedEndpoint = toNonEmptyString(endpoint);
+    if (!normalizedEndpoint) {
+        return "";
+    }
+
+    if (/^https?:\/\//i.test(normalizedEndpoint)) {
+        return normalizedEndpoint;
+    }
+
+    const preferredOrigin = toNonEmptyString(internalOrigin);
+    if (preferredOrigin) {
+        try {
+            return new URL(normalizedEndpoint, preferredOrigin).toString();
+        } catch {
+            // ignore and fallback to request origin
+        }
+    }
+
+    const origin = toNonEmptyString(requestOrigin);
+    if (!origin) {
+        return normalizedEndpoint;
+    }
+
+    try {
+        return new URL(normalizedEndpoint, origin).toString();
+    } catch {
+        return normalizedEndpoint;
+    }
+}
 
 function toNonEmptyString(value: unknown): string {
     return typeof value === "string" ? value.trim() : "";
@@ -329,7 +366,11 @@ async function fetchAuthStatus(
     options: ResolveUserDataOptions = {},
 ): Promise<AuthStatusResult> {
     const authConfig = USER_PROFILE_CONFIG.auth;
-    const endpoint = toNonEmptyString(authConfig.statusEndpoint);
+    const endpoint = resolveEndpointUrl(
+        authConfig.statusEndpoint,
+        options.requestOrigin,
+        options.internalOrigin,
+    );
     const fallbackUsername = getUserFallbackName();
 
     if (!endpoint) {
@@ -404,7 +445,11 @@ async function fetchDashboardFromApi(
     options: ResolveUserDataOptions = {},
 ): Promise<{ profile: ResolvedUserProfile; charts: ResolvedUserChart[] } | null> {
     const apiConfig = USER_PROFILE_CONFIG.api;
-    const endpoint = toNonEmptyString(apiConfig.endpoint);
+    const endpoint = resolveEndpointUrl(
+        apiConfig.endpoint,
+        options.requestOrigin,
+        options.internalOrigin,
+    );
 
     if (!endpoint || isBridgeEndpoint(endpoint)) {
         return null;

@@ -60,6 +60,8 @@ function resolveIcon(iconName?: string) {
 
 const dashboardResult = await resolveUserDashboardData(fetch, {
     cookieHeader: Astro.request.headers.get("cookie") || "",
+    requestOrigin: new URL(Astro.request.url).origin,
+    internalOrigin: process.env.FE_INTERNAL_ORIGIN || "http://127.0.0.1:4321",
 });
 const profile = dashboardResult.profile;
 const charts = dashboardResult.charts;

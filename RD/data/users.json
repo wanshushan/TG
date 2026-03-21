@@ -12,5 +12,12 @@
     "bio": "你好，admin2！欢迎使用灵·诊。",
     "avatar": "pjs2.png",
     "links": []
+  },
+  "111": {
+    "passwordSalt": "a115d73eb823ca9da48354c95a5a4004",
+    "passwordHash": "8ba18b3334cd9c267709f532e1c37dd1871b1ec1b5a7751a4bac16b999d8fce5",
+    "bio": "你好，111！欢迎使用灵·诊。",
+    "avatar": "",
+    "links": []
   }
 }
