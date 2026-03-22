@@ -8,6 +8,14 @@
     "selectedOptionName": "本地 DeepSeek R1 14B",
     "modelOptions": [
         {
+            "name": "API GPT-4o",
+            "apiEndpoint": "https://models.github.ai/inference/chat/completions",
+            "apiKeyEnv": "GITHUB_API_KEY",
+            "model": "openai/gpt-4o",
+            "stream": true,
+            "temperature": 0.1
+        },
+        {
             "name": "API DeepSeek V3.2-chat",
             "apiEndpoint": "https://api.deepseek.com/chat/completions",
             "apiKeyEnv": "DEEPSEEK_API_KEY",
@@ -22,10 +30,18 @@
             "model": "deepseek-reasoner",
             "stream": true,
             "temperature": 1.3
+        },
+        {
+            "name": "API GPT-4o 高温版本",
+            "apiEndpoint": "https://models.github.ai/inference/chat/completions",
+            "apiKeyEnv": "GITHUB_API_KEY",
+            "model": "openai/gpt-4o",
+            "stream": true,
+            "temperature": 1.3
         }
     ],
     "systemPrompt": "你是一个AI医生。",
-    "forexample":[
+    "forexample": [
         {
             "name": "本地 DeepSeek R1 14B",
             "apiEndpoint": "http://127.0.0.1:11434/api/chat",

@@ -89,6 +89,8 @@ def _normalize_api_endpoint(endpoint: str) -> str:
     value = endpoint.strip()
     if re.match(r"^https://api\.deepseek\.com/?$", value, flags=re.IGNORECASE):
         return "https://api.deepseek.com/chat/completions"
+    if re.match(r"^https://models\.github\.ai/inference/?$", value, flags=re.IGNORECASE):
+        return "https://models.github.ai/inference/chat/completions"
     return value
 
 

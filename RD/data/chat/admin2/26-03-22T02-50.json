@@ -1,0 +1,23 @@
+{
+  "recordName": "26-03-22T02:50",
+  "owner": "admin2",
+  "updatedAt": "2026-03-22T02:52:06.040958",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你好"
+    },
+    {
+      "role": "assistant",
+      "content": "请求出错：请求失败：HTTP 404 - 404 page not found"
+    },
+    {
+      "role": "user",
+      "content": "你好"
+    },
+    {
+      "role": "assistant",
+      "content": "请求出错：请求失败：HTTP 404 - 404 page not found"
+    }
+  ]
+}

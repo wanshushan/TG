@@ -1,0 +1,23 @@
+{
+  "recordName": "26-03-22T02:53",
+  "owner": "admin2",
+  "updatedAt": "2026-03-22T02:53:48.384994",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你好"
+    },
+    {
+      "role": "assistant",
+      "content": "请求出错：请求失败：HTTP 404 - 404 page not found"
+    },
+    {
+      "role": "user",
+      "content": "你好"
+    },
+    {
+      "role": "assistant",
+      "content": "您好！我是您的在线中医咨询助手。为了能更准确地为您分析身体状况，请先告诉我：\n\n**您最近最主要的不舒服是什么？以及这种情况持续多久了？**\n\n（例如：头痛、乏力、失眠、胃胀等，以及持续了几天、几周或几个月）"
+    }
+  ]
+}
