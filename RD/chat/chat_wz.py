@@ -21,6 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 CHAT_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 CHAT_DATA_DIR = DATA_DIR / "chat"
+FACE_DATA_DIR = DATA_DIR / "face"
 CONFIG_PATH = CHAT_DIR / "api.json"
 PROMPT_PATH = CHAT_DIR / "prompt.md"
 
@@ -28,6 +29,7 @@ _STORE_LOCK = Lock()
 
 CHAT_RECORD_NAME_PATTERN = re.compile(r"^\d{2}-\d{2}-\d{2}T\d{2}:\d{2}(?:-\d+)?$")
 SAFE_RECORD_BASENAME_PATTERN = re.compile(r"^\d{2}-\d{2}-\d{2}T\d{2}-\d{2}(?:-\d+)?$")
+FACE_RECORD_STEM_PATTERN = re.compile(r"^face-\d{2}-\d{2}-\d{2}T\d{2}-\d{2}(?:-\d+)?$")
 
 
 @dataclass
@@ -426,6 +428,79 @@ def _get_user_records_dir(request: Request) -> Path:
     return directory
 
 
+def _get_user_face_dir(request: Request) -> Path:
+    username = _safe_username(_get_session_username(request))
+    directory = FACE_DATA_DIR / username
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+
+def _list_face_record_stems(face_dir: Path) -> list[str]:
+    if not face_dir.exists():
+        return []
+    stems: list[str] = []
+    for entry in face_dir.iterdir():
+        if not entry.is_file() or entry.suffix.lower() != ".json":
+            continue
+        stem = entry.stem.strip()
+        if FACE_RECORD_STEM_PATTERN.match(stem):
+            stems.append(stem)
+    stems.sort(reverse=True)
+    return stems
+
+
+def _sanitize_face_record_stem(raw_name: str | None) -> str | None:
+    name = (raw_name or "").strip()
+    if not name:
+        return None
+    if not FACE_RECORD_STEM_PATTERN.match(name):
+        return None
+    return name
+
+
+def _extract_face_prompt(face_data: Any) -> str:
+    if isinstance(face_data, str):
+        return face_data.strip()
+    if isinstance(face_data, dict):
+        raw_text = face_data.get("rawText")
+        if isinstance(raw_text, str) and raw_text.strip():
+            return raw_text.strip()
+        try:
+            return json.dumps(face_data, ensure_ascii=False)
+        except TypeError:
+            return str(face_data)
+    if isinstance(face_data, list):
+        try:
+            return json.dumps(face_data, ensure_ascii=False)
+        except TypeError:
+            return str(face_data)
+    if face_data is None:
+        return ""
+    return str(face_data)
+
+
+def _read_face_attachment(face_dir: Path, stem: str) -> dict[str, Any]:
+    path = face_dir / f"{stem}.json"
+    if not path.exists():
+        raise FileNotFoundError("面诊记录不存在")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("面诊记录格式无效") from exc
+
+    if not isinstance(payload, dict):
+        raise ValueError("面诊记录格式无效")
+
+    face_data = payload.get("faceData")
+    prompt_text = _extract_face_prompt(face_data)
+
+    return {
+        "recordName": stem,
+        "faceData": face_data if face_data is not None else {},
+        "facePrompt": prompt_text,
+    }
+
+
 def _list_record_names(records_dir: Path) -> list[str]:
     if not records_dir.exists():
         return []
@@ -636,6 +711,42 @@ async def chat_records_get(
             return JSONResponse(status_code=404, content={"error": "记录不存在"})
         return JSONResponse(
             content={"recordName": record_name, "messages": messages},
+            headers={"Cache-Control": "no-store"},
+        )
+
+    return JSONResponse(status_code=400, content={"error": "不支持的 action 参数"})
+
+
+@router.get("/api/chat/face")
+async def chat_face_records_get(
+    request: Request,
+    action: str = Query(default="list"),
+    name: str = Query(default=""),
+) -> JSONResponse:
+    face_dir = _get_user_face_dir(request)
+
+    if action == "list":
+        return JSONResponse(
+            content={"records": _list_face_record_stems(face_dir)},
+            headers={"Cache-Control": "no-store"},
+        )
+
+    if action == "load":
+        record_stem = _sanitize_face_record_stem(name)
+        if not record_stem:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "name 参数无效，格式应为 face-yy-mm-ddThh-mm"},
+            )
+        try:
+            attachment = _read_face_attachment(face_dir, record_stem)
+        except FileNotFoundError:
+            return JSONResponse(status_code=404, content={"error": "面诊记录不存在"})
+        except ValueError as exc:
+            return JSONResponse(status_code=400, content={"error": str(exc)})
+
+        return JSONResponse(
+            content=attachment,
             headers={"Cache-Control": "no-store"},
         )
 

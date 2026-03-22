@@ -1,0 +1,408 @@
+---
+import BaseHead from "../../components/BaseHead.astro";
+import Header from "../../components/Header.astro";
+import { siteConfig } from "../../config";
+---
+
+<!doctype html>
+<html lang={siteConfig.defaultLanguage}>
+    <head>
+        <BaseHead title="灵诊·面诊" description="AI 面诊页面" />
+        <style>
+            :global(body) {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+            main.face-page {
+                width: 100%;
+                max-width: none;
+                margin: 0;
+                padding: 0.8rem 0;
+                flex: 1;
+                min-height: 0;
+                display: flex;
+                --face-radius: 0.95rem;
+                --face-radius-sm: 0.8rem;
+            }
+            .face-shell {
+                flex: 1;
+                width: calc(100% - 10px);
+                margin: 0 auto;
+                min-height: 0;
+                border-radius: var(--face-radius);
+                background: white;
+                display: grid;
+                grid-template-rows: auto minmax(0, 1fr) auto;
+                overflow: hidden;
+            }
+            .face-topbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 1rem;
+                padding: 1rem 1.1rem;
+                background: rgba(var(--gray-light), 0.75);
+            }
+            .face-topbar h1 {
+                margin: 0;
+                font-size: 1.35rem;
+                line-height: 1.25;
+            }
+            .subtitle {
+                margin: 0.35rem 0 0;
+                font-size: 0.95rem;
+                color: rgba(var(--gray-dark), 0.82);
+            }
+            .status {
+                margin: 0;
+                padding: 0.35rem 0.75rem;
+                border-radius: 999px;
+                background: rgba(var(--accent-rgb), 0.12);
+                font-size: 0.8rem;
+                line-height: 1.25;
+                color: var(--accent-dark);
+                white-space: nowrap;
+            }
+            .face-content {
+                min-height: 0;
+                overflow-y: auto;
+                padding: 1rem;
+                background: rgba(var(--gray-light), 0.45);
+            }
+            .preview-card {
+                width: min(100%, 760px);
+                margin: 0 auto;
+                background: white;
+                border-radius: var(--face-radius);
+                padding: 0.9rem;
+                display: grid;
+                gap: 0.75rem;
+            }
+            .result-card {
+                width: min(100%, 760px);
+                margin: 0.85rem auto 0;
+                background: white;
+                border-radius: var(--face-radius);
+                padding: 0.9rem;
+                display: grid;
+                gap: 0.6rem;
+            }
+            .result-title {
+                margin: 0;
+                font-size: 0.95rem;
+                color: rgba(var(--gray-dark), 0.85);
+                font-weight: 700;
+            }
+            .result-output {
+                margin: 0;
+                min-height: 8.5rem;
+                border-radius: var(--face-radius-sm);
+                background: rgba(var(--gray-light), 0.7);
+                padding: 0.75rem;
+                color: rgb(var(--gray-dark));
+                font-size: 0.9rem;
+                line-height: 1.6;
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+            .preview-box {
+                width: 100%;
+                min-height: 260px;
+                border-radius: var(--face-radius-sm);
+                background: rgba(var(--gray-light), 0.8);
+                display: grid;
+                place-items: center;
+                overflow: hidden;
+            }
+            .preview-box img {
+                width: 100%;
+                max-height: 62vh;
+                object-fit: contain;
+                display: block;
+            }
+            .preview-empty {
+                font-size: 0.92rem;
+                color: rgba(var(--gray-dark), 0.7);
+            }
+            .meta {
+                margin: 0;
+                font-size: 0.86rem;
+                color: rgba(var(--gray-dark), 0.82);
+            }
+            .face-form {
+                display: flex;
+                align-items: center;
+                gap: 0.7rem;
+                padding: 0.85rem 1rem 1rem;
+                background: rgba(var(--gray-light), 0.75);
+            }
+            .file-picker {
+                flex: 1;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.6rem;
+                border-radius: var(--face-radius-sm);
+                background: white;
+                padding: 0.5rem 0.65rem;
+            }
+            .file-picker input {
+                width: 100%;
+                color: rgb(var(--gray-dark));
+                font-size: 0.9rem;
+            }
+            .face-form button {
+                height: 2.9rem;
+                padding: 0 1rem;
+                border: none;
+                border-radius: var(--face-radius-sm);
+                background: var(--accent-dark);
+                color: white;
+                font-size: 0.95rem;
+                cursor: pointer;
+            }
+            .face-form button:disabled {
+                opacity: 0.55;
+                cursor: not-allowed;
+            }
+            @media (max-width: 720px) {
+                .face-topbar {
+                    flex-direction: column;
+                    gap: 0.55rem;
+                }
+                .status {
+                    white-space: normal;
+                }
+                .face-form {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+                .face-form button {
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <Header />
+        <main class="face-page">
+            <section class="face-shell">
+                <div class="face-topbar">
+                    <div>
+                        <h1>灵诊·面诊</h1>
+                        <p class="subtitle">请选择一张面部图片上传分析</p>
+                    </div>
+                    <div id="status" class="status">请选择图片后上传</div>
+                </div>
+
+                <section class="face-content" aria-live="polite">
+                    <article class="preview-card">
+                        <div class="preview-box" id="preview-box">
+                            <p class="preview-empty" id="preview-empty">
+                                尚未选择图片
+                            </p>
+                            <img id="preview-image" alt="面诊预览图" hidden />
+                        </div>
+                        <p class="meta" id="meta">
+                            支持 JPG / JPEG / PNG / WEBP / BMP / GIF
+                        </p>
+                    </article>
+                    <article class="result-card">
+                        <h2 class="result-title">
+                            面部数据（在问诊页面可以选择使用）
+                        </h2>
+                        <pre
+                            class="result-output"
+                            id="result-output">
+等待分析结果...
+                        </pre>
+                    </article>
+                </section>
+
+                <form id="face-upload-form" class="face-form">
+                    <label class="file-picker" for="face-image-input">
+                        <input
+                            id="face-image-input"
+                            type="file"
+                            accept="image/*"
+                            aria-label="选择面部图片"
+                            required
+                        />
+                    </label>
+                    <button id="face-upload-btn" type="submit">上传图片</button>
+                </form>
+            </section>
+        </main>
+
+        <script>
+            const statusEl = document.querySelector(
+                "#status",
+            ) as HTMLDivElement | null;
+            const formEl = document.querySelector(
+                "#face-upload-form",
+            ) as HTMLFormElement | null;
+            const imageInputEl = document.querySelector(
+                "#face-image-input",
+            ) as HTMLInputElement | null;
+            const uploadBtnEl = document.querySelector(
+                "#face-upload-btn",
+            ) as HTMLButtonElement | null;
+            const previewImageEl = document.querySelector(
+                "#preview-image",
+            ) as HTMLImageElement | null;
+            const previewEmptyEl = document.querySelector(
+                "#preview-empty",
+            ) as HTMLParagraphElement | null;
+            const metaEl = document.querySelector(
+                "#meta",
+            ) as HTMLParagraphElement | null;
+            const resultOutputEl = document.querySelector(
+                "#result-output",
+            ) as HTMLPreElement | null;
+
+            const uploadUrl = "/api/face/doc";
+
+            function setStatus(text: string) {
+                if (statusEl) {
+                    statusEl.textContent = text;
+                }
+            }
+
+            function getErrorMessage(error: unknown): string {
+                if (error instanceof Error) {
+                    return error.message;
+                }
+                return String(error);
+            }
+
+            function renderPreview(file: File | null) {
+                if (!previewImageEl || !previewEmptyEl || !metaEl) {
+                    return;
+                }
+
+                if (!file) {
+                    previewImageEl.hidden = true;
+                    previewImageEl.removeAttribute("src");
+                    previewEmptyEl.hidden = false;
+                    metaEl.textContent =
+                        "支持 JPG / JPEG / PNG / WEBP / BMP / GIF";
+                    return;
+                }
+
+                const objectUrl = URL.createObjectURL(file);
+                previewImageEl.src = objectUrl;
+                previewImageEl.hidden = false;
+                previewEmptyEl.hidden = true;
+                metaEl.textContent = `已选择：${file.name}（${Math.round(file.size / 1024)} KB）`;
+
+                previewImageEl.onload = () => {
+                    URL.revokeObjectURL(objectUrl);
+                };
+            }
+
+            function setResult(text: string) {
+                if (resultOutputEl) {
+                    resultOutputEl.textContent = text;
+                }
+            }
+
+            async function readStreamingText(
+                response: Response,
+            ): Promise<string> {
+                if (!response.body) {
+                    return await response.text();
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let combined = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        break;
+                    }
+                    const chunkText = decoder.decode(value, { stream: true });
+                    if (!chunkText) {
+                        continue;
+                    }
+                    combined += chunkText;
+                    setResult(combined);
+                }
+
+                combined += decoder.decode();
+                return combined;
+            }
+
+            if (formEl && imageInputEl && uploadBtnEl) {
+                imageInputEl.addEventListener("change", () => {
+                    const file = imageInputEl.files?.[0] || null;
+                    renderPreview(file);
+                    if (file) {
+                        setStatus("图片已选择，点击上传。");
+                        setResult("等待分析结果...");
+                    } else {
+                        setStatus("请选择图片后上传");
+                        setResult("等待分析结果...");
+                    }
+                });
+
+                formEl.addEventListener("submit", async (event) => {
+                    event.preventDefault();
+
+                    const file = imageInputEl.files?.[0];
+                    if (!file) {
+                        setStatus("请先选择一张图片");
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append("image", file);
+
+                    uploadBtnEl.disabled = true;
+                    setStatus("分析中，正在流式返回...");
+                    setResult("正在分析，请稍候...\n");
+
+                    try {
+                        const response = await fetch(uploadUrl, {
+                            method: "POST",
+                            body: formData,
+                            credentials: "include",
+                        });
+                        if (!response.ok) {
+                            const detailText = await response.text();
+                            throw new Error(
+                                detailText || `HTTP ${response.status}`,
+                            );
+                        }
+
+                        const finalText = await readStreamingText(response);
+                        const resultFile =
+                            response.headers.get("X-Result-File") || "";
+
+                        if (!finalText.trim()) {
+                            setResult("模型未返回内容。");
+                        }
+                        setStatus(
+                            resultFile
+                                ? `分析完成，结果已保存：${resultFile}`
+                                : "分析完成。",
+                        );
+                    } catch (error) {
+                        setStatus(`上传失败：${getErrorMessage(error)}`);
+                        if (
+                            resultOutputEl &&
+                            !resultOutputEl.textContent?.trim()
+                        ) {
+                            setResult("分析失败，暂无结果。");
+                        }
+                    } finally {
+                        uploadBtnEl.disabled = false;
+                    }
+                });
+            } else {
+                console.error("面诊页初始化失败：缺少必要 DOM 节点。");
+            }
+        </script>
+    </body>
+</html>

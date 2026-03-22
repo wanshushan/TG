@@ -1,0 +1,325 @@
+---
+import BaseHead from "../../components/BaseHead.astro";
+import Header from "../../components/Header.astro";
+import { siteConfig } from "../../config";
+---
+
+<!doctype html>
+<html lang={siteConfig.defaultLanguage}>
+    <head>
+        <BaseHead title="灵诊·舌诊" description="AI 舌诊页面" />
+        <style>
+            :global(body) {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+            main.tg-page {
+                width: 100%;
+                max-width: none;
+                margin: 0;
+                padding: 0.8rem 0;
+                flex: 1;
+                min-height: 0;
+                display: flex;
+                --tg-radius: 0.95rem;
+                --tg-radius-sm: 0.8rem;
+            }
+            .tg-shell {
+                flex: 1;
+                width: calc(100% - 10px);
+                margin: 0 auto;
+                min-height: 0;
+                border-radius: var(--tg-radius);
+                background: white;
+                display: grid;
+                grid-template-rows: auto minmax(0, 1fr) auto;
+                overflow: hidden;
+            }
+            .tg-topbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 1rem;
+                padding: 1rem 1.1rem;
+                background: rgba(var(--gray-light), 0.75);
+            }
+            .tg-topbar h1 {
+                margin: 0;
+                font-size: 1.35rem;
+                line-height: 1.25;
+            }
+            .subtitle {
+                margin: 0.35rem 0 0;
+                font-size: 0.95rem;
+                color: rgba(var(--gray-dark), 0.82);
+            }
+            .status {
+                margin: 0;
+                padding: 0.35rem 0.75rem;
+                border-radius: 999px;
+                background: rgba(var(--accent-rgb), 0.12);
+                font-size: 0.8rem;
+                line-height: 1.25;
+                color: var(--accent-dark);
+                white-space: nowrap;
+            }
+            .tg-content {
+                min-height: 0;
+                overflow-y: auto;
+                padding: 1rem;
+                background: rgba(var(--gray-light), 0.45);
+            }
+            .preview-card {
+                width: min(100%, 760px);
+                margin: 0 auto;
+                background: white;
+                border-radius: var(--tg-radius);
+                padding: 0.9rem;
+                display: grid;
+                gap: 0.75rem;
+            }
+            .preview-box {
+                width: 100%;
+                min-height: 260px;
+                border-radius: var(--tg-radius-sm);
+                background: rgba(var(--gray-light), 0.8);
+                display: grid;
+                place-items: center;
+                overflow: hidden;
+            }
+            .preview-box img {
+                width: 100%;
+                max-height: 62vh;
+                object-fit: contain;
+                display: block;
+            }
+            .preview-empty {
+                font-size: 0.92rem;
+                color: rgba(var(--gray-dark), 0.7);
+            }
+            .meta {
+                margin: 0;
+                font-size: 0.86rem;
+                color: rgba(var(--gray-dark), 0.82);
+            }
+            .tg-form {
+                display: flex;
+                align-items: center;
+                gap: 0.7rem;
+                padding: 0.85rem 1rem 1rem;
+                background: rgba(var(--gray-light), 0.75);
+            }
+            .file-picker {
+                flex: 1;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.6rem;
+                border-radius: var(--tg-radius-sm);
+                background: white;
+                padding: 0.5rem 0.65rem;
+            }
+            .file-picker input {
+                width: 100%;
+                color: rgb(var(--gray-dark));
+                font-size: 0.9rem;
+            }
+            .tg-form button {
+                height: 2.9rem;
+                padding: 0 1rem;
+                border: none;
+                border-radius: var(--tg-radius-sm);
+                background: var(--accent-dark);
+                color: white;
+                font-size: 0.95rem;
+                cursor: pointer;
+            }
+            .tg-form button:disabled {
+                opacity: 0.55;
+                cursor: not-allowed;
+            }
+            @media (max-width: 720px) {
+                .tg-topbar {
+                    flex-direction: column;
+                    gap: 0.55rem;
+                }
+                .status {
+                    white-space: normal;
+                }
+                .tg-form {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+                .tg-form button {
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <Header />
+        <main class="tg-page">
+            <section class="tg-shell">
+                <div class="tg-topbar">
+                    <div>
+                        <h1>灵诊·舌诊</h1>
+                        <p class="subtitle">请选择一张舌像图片上传分析</p>
+                    </div>
+                    <div id="status" class="status">请选择图片后上传</div>
+                </div>
+
+                <section class="tg-content" aria-live="polite">
+                    <article class="preview-card">
+                        <div class="preview-box" id="preview-box">
+                            <p class="preview-empty" id="preview-empty">
+                                尚未选择图片
+                            </p>
+                            <img id="preview-image" alt="舌诊预览图" hidden />
+                        </div>
+                        <p class="meta" id="meta">
+                            支持 JPG / JPEG / PNG / WEBP / BMP / GIF
+                        </p>
+                    </article>
+                </section>
+
+                <form id="tg-upload-form" class="tg-form">
+                    <label class="file-picker" for="tg-image-input">
+                        <input
+                            id="tg-image-input"
+                            type="file"
+                            accept="image/*"
+                            aria-label="选择舌像图片"
+                            required
+                        />
+                    </label>
+                    <button id="tg-upload-btn" type="submit">上传图片</button>
+                </form>
+            </section>
+        </main>
+
+        <script>
+            const statusEl = document.querySelector(
+                "#status",
+            ) as HTMLDivElement | null;
+            const formEl = document.querySelector(
+                "#tg-upload-form",
+            ) as HTMLFormElement | null;
+            const imageInputEl = document.querySelector(
+                "#tg-image-input",
+            ) as HTMLInputElement | null;
+            const uploadBtnEl = document.querySelector(
+                "#tg-upload-btn",
+            ) as HTMLButtonElement | null;
+            const previewImageEl = document.querySelector(
+                "#preview-image",
+            ) as HTMLImageElement | null;
+            const previewEmptyEl = document.querySelector(
+                "#preview-empty",
+            ) as HTMLParagraphElement | null;
+            const metaEl = document.querySelector(
+                "#meta",
+            ) as HTMLParagraphElement | null;
+
+            const uploadUrl = "/api/tg/upload";
+
+            function setStatus(text: string) {
+                if (statusEl) {
+                    statusEl.textContent = text;
+                }
+            }
+
+            function getErrorMessage(error: unknown): string {
+                if (error instanceof Error) {
+                    return error.message;
+                }
+                return String(error);
+            }
+
+            function renderPreview(file: File | null) {
+                if (!previewImageEl || !previewEmptyEl || !metaEl) {
+                    return;
+                }
+
+                if (!file) {
+                    previewImageEl.hidden = true;
+                    previewImageEl.removeAttribute("src");
+                    previewEmptyEl.hidden = false;
+                    metaEl.textContent =
+                        "支持 JPG / JPEG / PNG / WEBP / BMP / GIF";
+                    return;
+                }
+
+                const objectUrl = URL.createObjectURL(file);
+                previewImageEl.src = objectUrl;
+                previewImageEl.hidden = false;
+                previewEmptyEl.hidden = true;
+                metaEl.textContent = `已选择：${file.name}（${Math.round(file.size / 1024)} KB）`;
+
+                previewImageEl.onload = () => {
+                    URL.revokeObjectURL(objectUrl);
+                };
+            }
+
+            if (formEl && imageInputEl && uploadBtnEl) {
+                imageInputEl.addEventListener("change", () => {
+                    const file = imageInputEl.files?.[0] || null;
+                    renderPreview(file);
+                    if (file) {
+                        setStatus("图片已选择，点击上传。");
+                    } else {
+                        setStatus("请选择图片后上传");
+                    }
+                });
+
+                formEl.addEventListener("submit", async (event) => {
+                    event.preventDefault();
+
+                    const file = imageInputEl.files?.[0];
+                    if (!file) {
+                        setStatus("请先选择一张图片");
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append("image", file);
+
+                    uploadBtnEl.disabled = true;
+                    setStatus("上传处理中...");
+
+                    try {
+                        const response = await fetch(uploadUrl, {
+                            method: "POST",
+                            body: formData,
+                            credentials: "include",
+                        });
+
+                        const payload = await response.json().catch(() => ({}));
+                        if (!response.ok) {
+                            const detail =
+                                typeof payload?.detail === "string"
+                                    ? payload.detail
+                                    : `HTTP ${response.status}`;
+                            throw new Error(detail);
+                        }
+
+                        const filename =
+                            typeof payload?.filename === "string"
+                                ? payload.filename
+                                : "";
+                        const username =
+                            typeof payload?.username === "string"
+                                ? payload.username
+                                : "guest";
+                        setStatus(`上传成功：${filename}（用户：${username}）`);
+                    } catch (error) {
+                        setStatus(`上传失败：${getErrorMessage(error)}`);
+                    } finally {
+                        uploadBtnEl.disabled = false;
+                    }
+                });
+            } else {
+                console.error("舌诊页初始化失败：缺少必要 DOM 节点。");
+            }
+        </script>
+    </body>
+</html>

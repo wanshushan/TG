@@ -7,7 +7,7 @@ import { siteConfig } from "../../config";
 <!doctype html>
 <html lang={siteConfig.defaultLanguage} data-overlayscrollbars-initialize>
     <head>
-        <BaseHead title="项目" description="AI 对话项目页" />
+        <BaseHead title="灵诊·问诊" description="AI 对话项目页" />
         <style>
             :global(html) {
                 scrollbar-width: thin;
@@ -102,17 +102,6 @@ import { siteConfig } from "../../config";
                 line-height: 1;
                 color: rgba(var(--gray-dark), 0.8);
             }
-            .history-picker select {
-                border: 0;
-                background: transparent;
-                color: rgb(var(--gray-dark));
-                font-size: 0.82rem;
-                line-height: 1.2;
-                min-width: 9.5rem;
-            }
-            .history-picker select:focus {
-                outline: none;
-            }
             .model-picker {
                 display: inline-flex;
                 align-items: center;
@@ -127,16 +116,122 @@ import { siteConfig } from "../../config";
                 line-height: 1;
                 color: rgba(var(--gray-dark), 0.8);
             }
-            .model-picker select {
+            .picker-more {
+                position: relative;
+            }
+            .picker-native {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                margin: -1px;
+                padding: 0;
                 border: 0;
-                background: transparent;
+                clip: rect(0 0 0 0);
+                clip-path: inset(100%);
+                overflow: hidden;
+                white-space: nowrap;
+            }
+            .picker-trigger {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                min-width: 9rem;
+                max-width: min(18rem, 60vw);
+                border: 0;
+                border-radius: 0.62rem;
+                padding: 0.38rem 0.55rem;
+                background: rgba(var(--gray-light), 0.75);
                 color: rgb(var(--gray-dark));
                 font-size: 0.82rem;
                 line-height: 1.2;
-                min-width: 8rem;
+                cursor: pointer;
             }
-            .model-picker select:focus {
+            .picker-trigger:hover {
+                background: rgba(var(--gray-light), 1);
+            }
+            .picker-trigger-label {
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                text-align: left;
+            }
+            .picker-trigger-icon {
+                fill: currentColor;
+                flex-shrink: 0;
+            }
+            .picker-panel {
+                position: absolute;
+                z-index: 35;
+                right: 0;
+                top: calc(100% + 0.4rem);
+                width: min(20rem, calc(100vw - 2rem));
+                max-height: min(18rem, 55vh);
+                overflow-y: auto;
+                padding: 0.45rem;
+                border-radius: 0.8rem;
+                border: 0;
+                background: white;
+                box-shadow: 0 10px 24px rgba(var(--black), 12%);
+                display: none;
+            }
+            .picker-panel.is-open {
+                display: block;
+            }
+            #history-picker-options,
+            #model-picker-options,
+            #attachment-picker-options {
+                display: flex;
+                flex-direction: column;
+                gap: 0.1rem;
+            }
+            :global(.picker-option) {
+                display: inline-flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 0.6rem;
+                width: 100%;
+                appearance: none;
+                border: 0;
+                background: white;
+                color: rgba(var(--gray-dark), 0.88);
+                font-size: 0.85rem;
+                line-height: 1.2;
+                font-weight: 700;
+                text-align: left;
+                padding: 0.7rem 0.65rem;
+                border-radius: 0.55rem;
+                cursor: pointer;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                transition:
+                    background-color 0.2s ease,
+                    color 0.2s ease;
+            }
+            :global(.picker-option:focus),
+            :global(.picker-option:focus-visible) {
                 outline: none;
+                box-shadow: none;
+            }
+            :global(.picker-option::after) {
+                content: "›";
+                flex-shrink: 0;
+                color: rgba(var(--gray-dark), 0.32);
+                font-size: 1rem;
+                line-height: 1;
+            }
+            :global(.picker-option:hover) {
+                background: rgba(var(--accent-rgb), 0.14);
+                color: var(--accent-dark);
+            }
+            :global(.picker-option.is-selected) {
+                background: rgba(var(--accent-rgb), 0.12);
+                color: var(--accent-dark);
+            }
+            :global(.picker-option.is-selected::after) {
+                color: var(--accent);
             }
             .stream-toggle {
                 display: inline-flex;
@@ -358,6 +453,69 @@ import { siteConfig } from "../../config";
                 opacity: 0.55;
                 cursor: not-allowed;
             }
+            .chat-form-actions {
+                display: inline-flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.45rem;
+                width: 11.5rem;
+                flex-shrink: 0;
+            }
+            .attachment-picker {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.45rem;
+                padding: 0.2rem 0.35rem;
+                border-radius: var(--chat-radius-sm);
+                border: 1px solid rgba(var(--gray), 0.45);
+                background: white;
+            }
+            .attachment-picker > span {
+                font-size: 0.78rem;
+                line-height: 1;
+                color: rgba(var(--gray-dark), 0.8);
+            }
+            .attachment-picker .picker-trigger {
+                min-width: 0;
+                width: 100%;
+                max-width: none;
+                color: white;
+            }
+            .attachment-picker .picker-trigger-label {
+                color: white;
+            }
+            .attachment-picker .picker-trigger-icon {
+                color: white;
+                fill: currentColor;
+            }
+            .attachment-picker .picker-panel {
+                left: 0;
+                right: 0;
+                top: auto;
+                bottom: calc(100% + 0.4rem);
+                width: auto;
+                max-width: none;
+            }
+            .chat-shell,
+            .chat-topbar,
+            .history-picker,
+            .model-picker,
+            .attachment-picker,
+            .stream-toggle,
+            .temp-control,
+            .status,
+            .empty-state,
+            :global(.avatar),
+            :global(.bubble),
+            :global(.bubble) :where(pre),
+            .chat-form,
+            .chat-form textarea,
+            .chat-form button {
+                border: none !important;
+            }
+            .chat-form textarea:focus {
+                outline: none !important;
+            }
             @media (max-width: 720px) {
                 main.chat-page {
                     width: 100%;
@@ -382,6 +540,23 @@ import { siteConfig } from "../../config";
                 .topbar-left {
                     width: 100%;
                 }
+                .history-picker,
+                .model-picker {
+                    width: 100%;
+                    max-width: 100%;
+                    box-sizing: border-box;
+                }
+                .picker-trigger {
+                    flex: 1;
+                    min-width: 0;
+                    max-width: 100%;
+                }
+                .picker-panel {
+                    left: 0;
+                    right: 0;
+                    width: auto;
+                    max-width: 100%;
+                }
                 .status {
                     white-space: normal;
                 }
@@ -390,6 +565,14 @@ import { siteConfig } from "../../config";
                 }
                 .chat-form {
                     padding: 0.75rem;
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+                .chat-form-actions {
+                    width: 100%;
+                }
+                .chat-form button {
+                    width: 100%;
                 }
             }
         </style>
@@ -401,21 +584,92 @@ import { siteConfig } from "../../config";
                 <div class="chat-topbar">
                     <div class="topbar-left">
                         <h1>灵诊·问诊</h1>
-                        <label class="history-picker" for="history-select">
+                        <label
+                            class="history-picker picker-more"
+                            for="history-select"
+                            id="history-picker-root"
+                        >
                             <span>问诊记录</span>
                             <select
                                 id="history-select"
+                                class="picker-native"
                                 aria-label="选择问诊记录"></select>
+                            <button
+                                id="history-picker-trigger"
+                                class="picker-trigger"
+                                type="button"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                aria-controls="history-picker-panel"
+                            >
+                                <span
+                                    id="history-picker-label"
+                                    class="picker-trigger-label">当前会话</span
+                                >
+                                <svg
+                                    class="picker-trigger-icon"
+                                    viewBox="0 0 24 24"
+                                    width="14"
+                                    height="14"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M7 10l5 5 5-5z"></path>
+                                </svg>
+                            </button>
+                            <div
+                                id="history-picker-panel"
+                                class="picker-panel"
+                                role="listbox"
+                                aria-label="问诊记录选项"
+                            >
+                                <div id="history-picker-options"></div>
+                            </div>
                         </label>
                     </div>
                     <div class="topbar-right">
                         <div id="status" class="status">
                             正在读取 API 配置...
                         </div>
-                        <label class="model-picker" for="model-select">
+                        <label
+                            class="model-picker picker-more"
+                            for="model-select"
+                            id="model-picker-root"
+                        >
                             <span>模型/API</span>
-                            <select id="model-select" aria-label="选择模型"
-                            ></select>
+                            <select
+                                id="model-select"
+                                class="picker-native"
+                                aria-label="选择模型"></select>
+                            <button
+                                id="model-picker-trigger"
+                                class="picker-trigger"
+                                type="button"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                aria-controls="model-picker-panel"
+                            >
+                                <span
+                                    id="model-picker-label"
+                                    class="picker-trigger-label">未选择</span
+                                >
+                                <svg
+                                    class="picker-trigger-icon"
+                                    viewBox="0 0 24 24"
+                                    width="14"
+                                    height="14"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M7 10l5 5 5-5z"></path>
+                                </svg>
+                            </button>
+                            <div
+                                id="model-picker-panel"
+                                class="picker-panel"
+                                role="listbox"
+                                aria-label="模型选项"
+                            >
+                                <div id="model-picker-options"></div>
+                            </div>
                         </label>
                         <!-- 流式开关前端显示 -->
                         <!-- <label class="stream-toggle" for="stream-toggle">
@@ -450,9 +704,63 @@ import { siteConfig } from "../../config";
                     <textarea
                         id="user-input"
                         rows="1"
-                        placeholder="Enter 发送 , Shift+Enter 换行 "
+                        placeholder="Enter 发送 , Shift+Enter 换行 , 选择附件以使用面部与舌头数据（可选）" 
                         required></textarea>
-                    <button id="send-btn" type="submit">发送</button>
+                    <div class="chat-form-actions">
+                        <label
+                            class="attachment-picker picker-more"
+                            for="attachment-select"
+                            id="attachment-picker-root"
+                        >
+                            <span>附件</span>
+                            <select
+                                id="attachment-select"
+                                class="picker-native"
+                                aria-label="选择面诊附件"></select>
+                            <button
+                                id="attachment-picker-trigger"
+                                class="picker-trigger"
+                                type="button"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                aria-controls="attachment-picker-panel"
+                            >
+                                <span
+                                    id="attachment-picker-label"
+                                    class="picker-trigger-label">不附加</span
+                                >
+                                <!-- <svg
+                                    class="picker-trigger-icon"
+                                    viewBox="0 0 24 24"
+                                    width="14"
+                                    height="14"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M7 10l5 5 5-5z"></path>
+                                </svg> -->
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="18"
+                                    height="22"
+                                    viewBox="0 0 448 512"
+                                    ><!-- Icon from Font Awesome 6 Regular by Dave Gandy - https://creativecommons.org/licenses/by/4.0/ -->
+                                    <path
+                                        fill="currentColor"
+                                        d="M384 336H192c-8.8 0-16-7.2-16-16V64c0-8.8 7.2-16 16-16h140.1l67.9 67.9V320c0 8.8-7.2 16-16 16m-192 48h192c35.3 0 64-28.7 64-64V115.9c0-12.7-5.1-24.9-14.1-33.9l-67.8-67.9c-9-9-21.2-14.1-33.9-14.1H192c-35.3 0-64 28.7-64 64v256c0 35.3 28.7 64 64 64M64 128c-35.3 0-64 28.7-64 64v256c0 35.3 28.7 64 64 64h192c35.3 0 64-28.7 64-64v-32h-48v32c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V192c0-8.8 7.2-16 16-16h32v-48z"
+                                    ></path></svg
+                                >
+                            </button>
+                            <div
+                                id="attachment-picker-panel"
+                                class="picker-panel"
+                                role="listbox"
+                                aria-label="附件选项"
+                            >
+                                <div id="attachment-picker-options"></div>
+                            </div>
+                        </label>
+                        <button id="send-btn" type="submit">发送</button>
+                    </div>
                 </form>
             </section>
         </main>
@@ -485,14 +793,63 @@ import { siteConfig } from "../../config";
             const historySelectEl = document.querySelector(
                 "#history-select",
             ) as HTMLSelectElement | null;
+            const historyPickerRootEl = document.querySelector(
+                "#history-picker-root",
+            ) as HTMLLabelElement | null;
+            const historyPickerTriggerEl = document.querySelector(
+                "#history-picker-trigger",
+            ) as HTMLButtonElement | null;
+            const historyPickerLabelEl = document.querySelector(
+                "#history-picker-label",
+            ) as HTMLSpanElement | null;
+            const historyPickerPanelEl = document.querySelector(
+                "#history-picker-panel",
+            ) as HTMLDivElement | null;
+            const historyPickerOptionsEl = document.querySelector(
+                "#history-picker-options",
+            ) as HTMLDivElement | null;
             const streamToggleEl = document.querySelector(
                 "#stream-toggle",
             ) as HTMLInputElement | null;
             const temperatureInputEl = document.querySelector(
                 "#temperature-input",
             ) as HTMLInputElement | null;
+            const modelPickerRootEl = document.querySelector(
+                "#model-picker-root",
+            ) as HTMLLabelElement | null;
+            const modelPickerTriggerEl = document.querySelector(
+                "#model-picker-trigger",
+            ) as HTMLButtonElement | null;
+            const modelPickerLabelEl = document.querySelector(
+                "#model-picker-label",
+            ) as HTMLSpanElement | null;
+            const modelPickerPanelEl = document.querySelector(
+                "#model-picker-panel",
+            ) as HTMLDivElement | null;
+            const modelPickerOptionsEl = document.querySelector(
+                "#model-picker-options",
+            ) as HTMLDivElement | null;
+            const attachmentSelectEl = document.querySelector(
+                "#attachment-select",
+            ) as HTMLSelectElement | null;
+            const attachmentPickerRootEl = document.querySelector(
+                "#attachment-picker-root",
+            ) as HTMLLabelElement | null;
+            const attachmentPickerTriggerEl = document.querySelector(
+                "#attachment-picker-trigger",
+            ) as HTMLButtonElement | null;
+            const attachmentPickerLabelEl = document.querySelector(
+                "#attachment-picker-label",
+            ) as HTMLSpanElement | null;
+            const attachmentPickerPanelEl = document.querySelector(
+                "#attachment-picker-panel",
+            ) as HTMLDivElement | null;
+            const attachmentPickerOptionsEl = document.querySelector(
+                "#attachment-picker-options",
+            ) as HTMLDivElement | null;
             const configUrl = "/api/chat/config";
             const chatProxyUrl = "/api/chat";
+            const faceAttachmentUrl = "/api/chat/face";
             let apiEndpoint = "";
             let model = "llama3.2";
             let selectedOptionName = "";
@@ -515,6 +872,12 @@ import { siteConfig } from "../../config";
             let useStream = false;
             let currentTemperature: number | null = null;
             const chatHistory: ChatHistoryMessage[] = [];
+            let syncModelPickerMenu = () => {};
+            let syncHistoryPickerMenu = () => {};
+            let syncAttachmentPickerMenu = () => {};
+            let faceAttachmentRecords: string[] = [];
+            let selectedFaceAttachmentName = "";
+            let selectedFacePrompt = "";
 
             function normalizeTemperature(value: unknown): number | null {
                 if (typeof value === "number" && Number.isFinite(value)) {
@@ -688,12 +1051,151 @@ import { siteConfig } from "../../config";
                 if (selectedOptionName) {
                     modelSelectEl.value = selectedOptionName;
                 }
+                syncModelPickerMenu();
             }
 
             function setStatus(text: string) {
                 if (statusEl) {
                     statusEl.textContent = text;
                 }
+            }
+
+            function setupPickerMenu(args: {
+                rootEl: HTMLElement | null;
+                selectEl: HTMLSelectElement | null;
+                triggerEl: HTMLButtonElement | null;
+                labelEl: HTMLSpanElement | null;
+                panelEl: HTMLDivElement | null;
+                optionsEl: HTMLDivElement | null;
+                emptyLabel: string;
+            }): () => void {
+                const {
+                    rootEl,
+                    selectEl,
+                    triggerEl,
+                    labelEl,
+                    panelEl,
+                    optionsEl,
+                    emptyLabel,
+                } = args;
+
+                if (
+                    !rootEl ||
+                    !selectEl ||
+                    !triggerEl ||
+                    !labelEl ||
+                    !panelEl ||
+                    !optionsEl
+                ) {
+                    return () => {};
+                }
+
+                const closePanel = () => {
+                    panelEl.classList.remove("is-open");
+                    triggerEl.setAttribute("aria-expanded", "false");
+                    panelEl.style.transform = "translateX(0)";
+                };
+
+                const adjustPanelPosition = () => {
+                    panelEl.style.transform = "translateX(0)";
+                    const viewportGap = 8;
+                    const rect = panelEl.getBoundingClientRect();
+                    let offsetX = 0;
+
+                    if (rect.right > window.innerWidth - viewportGap) {
+                        offsetX = window.innerWidth - viewportGap - rect.right;
+                    }
+                    if (rect.left + offsetX < viewportGap) {
+                        offsetX += viewportGap - (rect.left + offsetX);
+                    }
+
+                    if (offsetX !== 0) {
+                        panelEl.style.transform = `translateX(${offsetX}px)`;
+                    }
+                };
+
+                const renderOptions = () => {
+                    const selectOptions = Array.from(selectEl.options);
+                    const selectedOption =
+                        selectOptions.find(
+                            (option) => option.value === selectEl.value,
+                        ) || selectOptions[0];
+
+                    labelEl.textContent =
+                        selectedOption?.textContent?.trim() || emptyLabel;
+                    optionsEl.innerHTML = "";
+
+                    for (const option of selectOptions) {
+                        const optionButton = document.createElement("button");
+                        optionButton.type = "button";
+                        optionButton.className = "picker-option";
+                        optionButton.textContent = option.textContent || "";
+                        optionButton.setAttribute("role", "option");
+                        const isSelected = option.value === selectEl.value;
+                        optionButton.setAttribute(
+                            "aria-selected",
+                            isSelected ? "true" : "false",
+                        );
+
+                        if (isSelected) {
+                            optionButton.classList.add("is-selected");
+                        }
+
+                        optionButton.addEventListener("click", () => {
+                            if (selectEl.value !== option.value) {
+                                selectEl.value = option.value;
+                                selectEl.dispatchEvent(new Event("change"));
+                            }
+                            closePanel();
+                        });
+
+                        optionsEl.appendChild(optionButton);
+                    }
+                };
+
+                if (rootEl.dataset.pickerInitialized !== "true") {
+                    triggerEl.addEventListener("click", (event) => {
+                        event.stopPropagation();
+                        const nextOpen = !panelEl.classList.contains("is-open");
+                        panelEl.classList.toggle("is-open", nextOpen);
+                        triggerEl.setAttribute(
+                            "aria-expanded",
+                            nextOpen ? "true" : "false",
+                        );
+
+                        if (nextOpen) {
+                            requestAnimationFrame(adjustPanelPosition);
+                        }
+                    });
+
+                    document.addEventListener("click", (event) => {
+                        const target = event.target;
+                        if (!(target instanceof Node)) {
+                            return;
+                        }
+                        if (!rootEl.contains(target)) {
+                            closePanel();
+                        }
+                    });
+
+                    document.addEventListener("keydown", (event) => {
+                        if (event.key === "Escape") {
+                            closePanel();
+                        }
+                    });
+
+                    window.addEventListener("resize", () => {
+                        if (panelEl.classList.contains("is-open")) {
+                            adjustPanelPosition();
+                        }
+                    });
+
+                    selectEl.addEventListener("change", renderOptions);
+                    rootEl.dataset.pickerInitialized = "true";
+                }
+
+                renderOptions();
+                return renderOptions;
             }
 
             function autoResizeInput() {
@@ -888,6 +1390,96 @@ import { siteConfig } from "../../config";
                 } else {
                     historySelectEl.value = "";
                 }
+                syncHistoryPickerMenu();
+            }
+
+            function renderAttachmentOptions() {
+                if (!attachmentSelectEl) {
+                    return;
+                }
+
+                attachmentSelectEl.innerHTML = "";
+
+                const noneOption = document.createElement("option");
+                noneOption.value = "";
+                noneOption.textContent = "不附加";
+                attachmentSelectEl.appendChild(noneOption);
+
+                for (const recordName of faceAttachmentRecords) {
+                    const optionEl = document.createElement("option");
+                    optionEl.value = recordName;
+                    optionEl.textContent = recordName;
+                    attachmentSelectEl.appendChild(optionEl);
+                }
+
+                attachmentSelectEl.value =
+                    selectedFaceAttachmentName &&
+                    faceAttachmentRecords.includes(selectedFaceAttachmentName)
+                        ? selectedFaceAttachmentName
+                        : "";
+                syncAttachmentPickerMenu();
+            }
+
+            async function fetchFaceAttachmentList() {
+                const response = await fetch(
+                    `${faceAttachmentUrl}?action=list`,
+                    {
+                        cache: "no-store",
+                        credentials: "include",
+                    },
+                );
+                if (!response.ok) {
+                    throw new Error(
+                        `读取附件列表失败：HTTP ${response.status}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    records?: unknown;
+                };
+                const records = Array.isArray(payload.records)
+                    ? payload.records
+                          .filter(
+                              (value): value is string =>
+                                  typeof value === "string",
+                          )
+                          .map((value) => value.trim())
+                          .filter((value) => value.length > 0)
+                    : [];
+
+                faceAttachmentRecords = sortRecordNames(records);
+                renderAttachmentOptions();
+            }
+
+            async function loadFaceAttachmentByName(recordName: string) {
+                const response = await fetch(
+                    `${faceAttachmentUrl}?action=load&name=${encodeURIComponent(recordName)}`,
+                    {
+                        cache: "no-store",
+                        credentials: "include",
+                    },
+                );
+                if (!response.ok) {
+                    const detail = (await response.text()).trim();
+                    throw new Error(
+                        `读取附件失败：HTTP ${response.status}${detail ? ` - ${detail}` : ""}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    facePrompt?: unknown;
+                    recordName?: unknown;
+                };
+
+                const promptText =
+                    typeof payload.facePrompt === "string"
+                        ? payload.facePrompt.trim()
+                        : "";
+                selectedFacePrompt = promptText;
+                selectedFaceAttachmentName =
+                    typeof payload.recordName === "string"
+                        ? payload.recordName.trim()
+                        : recordName;
             }
 
             function normalizeRecordMessages(
@@ -1195,6 +1787,34 @@ import { siteConfig } from "../../config";
             }
 
             if (statusEl && messagesEl && formEl && inputEl && sendBtn) {
+                syncModelPickerMenu = setupPickerMenu({
+                    rootEl: modelPickerRootEl,
+                    selectEl: modelSelectEl,
+                    triggerEl: modelPickerTriggerEl,
+                    labelEl: modelPickerLabelEl,
+                    panelEl: modelPickerPanelEl,
+                    optionsEl: modelPickerOptionsEl,
+                    emptyLabel: "未选择",
+                });
+                syncHistoryPickerMenu = setupPickerMenu({
+                    rootEl: historyPickerRootEl,
+                    selectEl: historySelectEl,
+                    triggerEl: historyPickerTriggerEl,
+                    labelEl: historyPickerLabelEl,
+                    panelEl: historyPickerPanelEl,
+                    optionsEl: historyPickerOptionsEl,
+                    emptyLabel: "当前会话",
+                });
+                syncAttachmentPickerMenu = setupPickerMenu({
+                    rootEl: attachmentPickerRootEl,
+                    selectEl: attachmentSelectEl,
+                    triggerEl: attachmentPickerTriggerEl,
+                    labelEl: attachmentPickerLabelEl,
+                    panelEl: attachmentPickerPanelEl,
+                    optionsEl: attachmentPickerOptionsEl,
+                    emptyLabel: "不附加",
+                });
+
                 inputEl.addEventListener("input", autoResizeInput);
                 inputEl.addEventListener("keydown", (event) => {
                     if (event.key === "Enter" && !event.shiftKey) {
@@ -1255,6 +1875,30 @@ import { siteConfig } from "../../config";
                         inputEl.focus();
                     }
                 });
+                attachmentSelectEl?.addEventListener("change", async () => {
+                    const selectedAttachment = attachmentSelectEl.value.trim();
+                    if (!selectedAttachment) {
+                        selectedFaceAttachmentName = "";
+                        selectedFacePrompt = "";
+                        setStatus("已取消附件。将仅使用问诊基础提示词。");
+                        return;
+                    }
+
+                    sendBtn.disabled = true;
+                    try {
+                        await loadFaceAttachmentByName(selectedAttachment);
+                        setStatus(`已附加面诊数据：${selectedAttachment}`);
+                    } catch (error) {
+                        selectedFaceAttachmentName = "";
+                        selectedFacePrompt = "";
+                        attachmentSelectEl.value = "";
+                        syncAttachmentPickerMenu();
+                        setStatus(`附件加载失败：${getErrorMessage(error)}`);
+                    } finally {
+                        sendBtn.disabled = false;
+                        inputEl.focus();
+                    }
+                });
 
                 formEl.addEventListener("submit", async (event) => {
                     event.preventDefault();
@@ -1281,13 +1925,34 @@ import { siteConfig } from "../../config";
                             role: "system" | "user" | "assistant";
                             content: string;
                         }> = [];
+
                         if (systemPrompt) {
                             messages.push({
                                 role: "system",
-                                content: systemPrompt,
+                                content: systemPrompt.trim(),
                             });
                         }
-                        messages.push(...chatHistory);
+
+                        const requestHistory = chatHistory.map((item) => ({
+                            role: item.role,
+                            content: item.content,
+                        }));
+
+                        if (selectedFacePrompt) {
+                            for (
+                                let index = requestHistory.length - 1;
+                                index >= 0;
+                                index -= 1
+                            ) {
+                                const item = requestHistory[index];
+                                if (item.role === "user") {
+                                    item.content = `${item.content}\n\n【面诊附件数据（${selectedFaceAttachmentName || "未命名"}）】\n${selectedFacePrompt}`;
+                                    break;
+                                }
+                            }
+                        }
+
+                        messages.push(...requestHistory);
 
                         const response = await fetch(chatProxyUrl, {
                             method: "POST",
@@ -1404,6 +2069,7 @@ import { siteConfig } from "../../config";
                     await loadApiConfig();
                     try {
                         await fetchRecordList();
+                        await fetchFaceAttachmentList();
                     } catch (error) {
                         setStatus(
                             `读取历史记录失败：${getErrorMessage(error)}`,

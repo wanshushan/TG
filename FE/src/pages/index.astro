@@ -31,6 +31,13 @@ const markdownFontScale = getMarkdownRenderConfig().fontScale;
             .home-content {
                 max-width: 720px;
                 font-size: var(--markdown-font-scale);
+                overflow-wrap: anywhere;
+                word-break: break-word;
+            }
+
+            .home-content :where(p, li, a, span, h1, h2, h3, h4, h5, h6) {
+                overflow-wrap: anywhere;
+                word-break: break-word;
             }
 
             @media (min-width: 721px) {

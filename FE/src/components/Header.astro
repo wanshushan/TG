@@ -71,6 +71,7 @@ const headerUserFallbackName = getUserFallbackName();
 const headerUserPagePath = getUserPagePath();
 const headerAuthStateStorageKey = getAuthStateStorageKey();
 const headerAuthUsernameStorageKey = getAuthUsernameStorageKey();
+const navigationItems = getNavigationItems();
 ---
 
 <header>
@@ -78,7 +79,7 @@ const headerAuthUsernameStorageKey = getAuthUsernameStorageKey();
 		<h2><a href="/">{siteConfig.title}</a></h2>
 		<div class="internal-links">
 			{
-				getNavigationItems().map((item) => {
+				navigationItems.map((item) => {
 					const icon = resolveIcon(item.icon);
 					return (
 						<HeaderLink href={item.href}>
@@ -150,6 +151,111 @@ const headerAuthUsernameStorageKey = getAuthUsernameStorageKey();
 				})
 			}
 		</div>
+		<button
+			type="button"
+			class="mobile-menu-toggle"
+			id="header-mobile-menu-toggle"
+			aria-label="更多导航"
+			aria-expanded="false"
+			aria-controls="header-mobile-menu-panel"
+		>
+			<!-- <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+				<circle cx="12" cy="5" r="2"></circle>
+				<circle cx="12" cy="12" r="2"></circle>
+				<circle cx="12" cy="19" r="2"></circle>
+			</svg> -->
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="24"
+				height="24"
+				viewBox="0 0 448 512"
+				><!-- Icon from Font Awesome 6 Solid by Dave Gandy - https://creativecommons.org/licenses/by/4.0/ -->
+				<path
+					fill="currentColor"
+					d="M0 96c0-17.7 14.3-32 32-32h384c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32m0 160c0-17.7 14.3-32 32-32h384c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32m448 160c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32h384c17.7 0 32 14.3 32 32"
+				></path></svg
+			>
+		</button>
+		<div
+			class="mobile-menu-panel"
+			id="header-mobile-menu-panel"
+			aria-hidden="true"
+		>
+			<div class="mobile-menu-group">
+				{
+					navigationItems.map((item) => {
+						const icon = resolveIcon(item.icon);
+						return (
+							<HeaderLink href={item.href}>
+								<span class="link-content">
+									{icon && (
+										<svg
+											class="nav-icon-svg"
+											viewBox={icon.viewBox}
+											aria-hidden="true"
+											width="16"
+											height="16"
+										>
+											<g set:html={icon.body} />
+										</svg>
+									)}
+									<span>{item.label}</span>
+								</span>
+							</HeaderLink>
+						);
+					})
+				}
+			</div>
+			<div class="mobile-menu-group">
+				{
+					HEADER_SOCIAL_LINKS.map((link) => {
+						const icon = resolveIcon(link.icon);
+						const isUserEntry = link.href === headerUserPagePath;
+						const content = (
+							<span class="link-content">
+								{icon && (
+									<svg
+										class="social-icon-svg"
+										viewBox={icon.viewBox}
+										aria-hidden="true"
+										width="16"
+										height="16"
+									>
+										<g set:html={icon.body} />
+									</svg>
+								)}
+								<span
+									data-header-username={
+										isUserEntry ? "true" : undefined
+									}
+								>
+									{link.name}
+								</span>
+							</span>
+						);
+
+						if (link.external) {
+							return (
+								<a
+									href={link.href}
+									title={link.name}
+									target="_blank"
+									rel="noopener"
+								>
+									{content}
+								</a>
+							);
+						}
+
+						return (
+							<HeaderLink href={link.href} title={link.name}>
+								{content}
+							</HeaderLink>
+						);
+					})
+				}
+			</div>
+		</div>
 	</nav>
 </header>
 <script
@@ -214,13 +320,77 @@ const headerAuthUsernameStorageKey = getAuthUsernameStorageKey();
 		}
 	}
 
-	if (document.readyState === "loading") {
-		document.addEventListener("DOMContentLoaded", syncHeaderUsername);
-	} else {
-		syncHeaderUsername();
+	function setupHeaderMobileMenu() {
+		const menuToggle = document.getElementById("header-mobile-menu-toggle");
+		const menuPanel = document.getElementById("header-mobile-menu-panel");
+
+		if (!(menuToggle instanceof HTMLButtonElement) || !menuPanel) {
+			return;
+		}
+
+		if (menuToggle.dataset.initialized === "true") {
+			return;
+		}
+
+		const closeMenu = () => {
+			menuPanel.classList.remove("is-open");
+			menuPanel.setAttribute("aria-hidden", "true");
+			menuToggle.setAttribute("aria-expanded", "false");
+		};
+
+		const toggleMenu = () => {
+			const isOpen = menuPanel.classList.toggle("is-open");
+			menuPanel.setAttribute("aria-hidden", isOpen ? "false" : "true");
+			menuToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+		};
+
+		menuToggle.addEventListener("click", (event) => {
+			event.stopPropagation();
+			toggleMenu();
+		});
+
+		document.addEventListener("click", (event) => {
+			const target = event.target;
+			if (!(target instanceof Node)) {
+				return;
+			}
+
+			if (!menuPanel.contains(target) && !menuToggle.contains(target)) {
+				closeMenu();
+			}
+		});
+
+		document.addEventListener("keydown", (event) => {
+			if (event.key === "Escape") {
+				closeMenu();
+			}
+		});
+
+		menuPanel.querySelectorAll("a").forEach((linkNode) => {
+			linkNode.addEventListener("click", closeMenu);
+		});
+
+		window.addEventListener("resize", () => {
+			if (window.innerWidth > 720) {
+				closeMenu();
+			}
+		});
+
+		menuToggle.dataset.initialized = "true";
 	}
 
-	document.addEventListener("astro:after-swap", syncHeaderUsername);
+	function initHeaderInteractions() {
+		syncHeaderUsername();
+		setupHeaderMobileMenu();
+	}
+
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", initHeaderInteractions);
+	} else {
+		initHeaderInteractions();
+	}
+
+	document.addEventListener("astro:after-swap", initHeaderInteractions);
 </script>
 <style>
 	header {
@@ -242,6 +412,7 @@ const headerAuthUsernameStorageKey = getAuthUsernameStorageKey();
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
+		position: relative;
 	}
 	nav a {
 		padding: 1em 0.5em;
@@ -257,6 +428,66 @@ const headerAuthUsernameStorageKey = getAuthUsernameStorageKey();
 	.social-links a {
 		display: flex;
 	}
+	.mobile-menu-toggle {
+		display: none;
+		align-items: center;
+		justify-content: center;
+		width: 2.75rem;
+		height: 2.75rem;
+		border: 0;
+		border-radius: 0.7rem;
+		background: transparent;
+		color: rgb(var(--black));
+		cursor: pointer;
+		transition: background-color 0.2s ease;
+	}
+	.mobile-menu-toggle:hover {
+		background: rgba(var(--gray-light), 0.85);
+	}
+	.mobile-menu-toggle:active {
+		background: rgba(var(--gray-light), 1);
+	}
+	.mobile-menu-toggle svg {
+		fill: currentColor;
+	}
+	.mobile-menu-panel {
+		display: none;
+		position: absolute;
+		right: 0;
+		top: calc(100% + 0.4rem);
+		z-index: 30;
+		width: min(18rem, calc(100vw - 2rem));
+		padding: 0.45rem;
+		background: white;
+		border-radius: 0.8rem;
+		box-shadow: 0 10px 24px rgba(var(--black), 12%);
+	}
+	.mobile-menu-panel.is-open {
+		display: block;
+	}
+	.mobile-menu-group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+	}
+	.mobile-menu-group + .mobile-menu-group {
+		margin-top: 0.3rem;
+		padding-top: 0.35rem;
+		border-top: 1px solid rgba(var(--gray), 20%);
+	}
+	.mobile-menu-panel a {
+		display: block;
+		padding: 0.75rem 0.65rem;
+		border-bottom: 0;
+		border-radius: 0.55rem;
+	}
+	.mobile-menu-panel a:hover {
+		background: rgba(var(--gray-light), 0.6);
+	}
+	.mobile-menu-panel a.active {
+		border-bottom-color: transparent;
+		background: rgba(var(--accent-rgb), 0.1);
+	}
 	.link-content {
 		display: inline-flex;
 		align-items: center;
@@ -268,8 +499,12 @@ const headerAuthUsernameStorageKey = getAuthUsernameStorageKey();
 		flex-shrink: 0;
 	}
 	@media (max-width: 720px) {
+		.internal-links,
 		.social-links {
 			display: none;
+		}
+		.mobile-menu-toggle {
+			display: inline-flex;
 		}
 	}
 </style>

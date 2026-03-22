@@ -88,8 +88,10 @@ export const FOOTER_SOCIAL_LINKS: FooterSocialLink[] = [
 export enum NavigationItemOrder {
     HOME = 0,
     BLOG = 1,
-    PROJECT = 2,
-    ABOUT = 3,
+    FACE = 2,
+    TG = 3,
+    PROJECT = 4,
+    ABOUT = 5,
 }
 
 /**
@@ -116,10 +118,22 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
         icon: 'fa6-regular:newspaper',
     },
     {
+        order: NavigationItemOrder.FACE,
+        href: '/face',
+        label: '面诊',
+        icon: 'fa6-regular:face-smile',
+    },
+    {
         order: NavigationItemOrder.PROJECT,
         href: '/project',
         label: '问诊',
         icon: 'fa6-regular:message',
+    },
+    {
+        order: NavigationItemOrder.TG,
+        href: '/tg',
+        label: '舌诊',
+        icon: 'fa6-regular:face-grin-tongue',
     },
     {
         order: NavigationItemOrder.ABOUT,
