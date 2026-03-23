@@ -10,6 +10,9 @@ export default defineConfig({
 	site: 'https://tg.wanshushan.top/',
 	output: 'server',
 	adapter: node({ mode: 'standalone' }),
+	security: {
+		checkOrigin: false,
+	},
 	integrations: [mdx(), sitemap()],
 	vite: {
 		server: {

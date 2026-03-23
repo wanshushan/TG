@@ -14,11 +14,25 @@ function buildUpstreamUrl(requestUrl: URL): string {
     return `${getBackendBaseUrl()}${requestUrl.pathname}${requestUrl.search}`;
 }
 
+function getOriginFromUrl(url: string): string | null {
+    try {
+        return new URL(url).origin;
+    } catch {
+        return null;
+    }
+}
+
 function copyRequestHeaders(source: Headers): Headers {
     const headers = new Headers();
     for (const [key, value] of source.entries()) {
         const lower = key.toLowerCase();
-        if (lower === "host" || lower === "content-length") {
+        if (
+            lower === "host" ||
+            lower === "content-length" ||
+            lower === "origin" ||
+            lower === "referer" ||
+            lower.startsWith("sec-fetch-")
+        ) {
             continue;
         }
         headers.set(key, value);
@@ -30,7 +44,14 @@ async function proxyRequest(context: Parameters<APIRoute>[0]): Promise<Response>
     const { request } = context;
     const method = request.method.toUpperCase();
     const upstreamUrl = buildUpstreamUrl(new URL(request.url));
+    const upstreamOrigin = getOriginFromUrl(upstreamUrl);
+
     const headers = copyRequestHeaders(request.headers);
+
+    if (upstreamOrigin) {
+        headers.set("origin", upstreamOrigin);
+        headers.set("referer", `${upstreamOrigin}/`);
+    }
 
     const hasBody = !["GET", "HEAD"].includes(method);
     const body = hasBody ? await request.arrayBuffer() : undefined;
