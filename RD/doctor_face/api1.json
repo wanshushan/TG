@@ -8,12 +8,12 @@
     "selectedOptionName": "本地 DeepSeek R1 14B",
     "modelOptions": [
         {
-            "name": "API GPT-4o",
-            "apiEndpoint": "https://models.github.ai/inference/chat/completions",
-            "apiKeyEnv": "GITHUB_API_KEY",
-            "model": "openai/gpt-4o",
+            "name": "API MIMO V2 Omni",
+            "apiEndpoint": "https://api.xiaomimimo.com/v1",
+            "apiKeyEnv": "XIAOMI_MIMO_API_KEY",
+            "model": "mimo-v2-omni",
             "stream": true,
-            "temperature": 0.1
+            "temperature": 0.8
         }
     ],
     "systemPrompt": "你是一个AI医生。",

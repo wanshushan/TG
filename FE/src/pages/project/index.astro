@@ -88,151 +88,6 @@ import { siteConfig } from "../../config";
                 row-gap: 0.35rem;
                 justify-content: flex-start;
             }
-            .history-picker {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.45rem;
-                padding: 0.2rem 0.35rem;
-                border-radius: 999px;
-                border: 1px solid rgba(var(--gray), 0.45);
-                background: white;
-            }
-            .history-picker span {
-                font-size: 0.78rem;
-                line-height: 1;
-                color: rgba(var(--gray-dark), 0.8);
-            }
-            .model-picker {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.45rem;
-                padding: 0.2rem 0.35rem;
-                border-radius: 999px;
-                border: 1px solid rgba(var(--gray), 0.45);
-                background: white;
-            }
-            .model-picker span {
-                font-size: 0.78rem;
-                line-height: 1;
-                color: rgba(var(--gray-dark), 0.8);
-            }
-            .picker-more {
-                position: relative;
-            }
-            .picker-native {
-                position: absolute;
-                width: 1px;
-                height: 1px;
-                margin: -1px;
-                padding: 0;
-                border: 0;
-                clip: rect(0 0 0 0);
-                clip-path: inset(100%);
-                overflow: hidden;
-                white-space: nowrap;
-            }
-            .picker-trigger {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.4rem;
-                min-width: 9rem;
-                max-width: min(18rem, 60vw);
-                border: 0;
-                border-radius: 0.62rem;
-                padding: 0.38rem 0.55rem;
-                background: rgba(var(--gray-light), 0.75);
-                color: rgb(var(--gray-dark));
-                font-size: 0.82rem;
-                line-height: 1.2;
-                cursor: pointer;
-            }
-            .picker-trigger:hover {
-                background: rgba(var(--gray-light), 1);
-            }
-            .picker-trigger-label {
-                flex: 1;
-                min-width: 0;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                text-align: left;
-            }
-            .picker-trigger-icon {
-                fill: currentColor;
-                flex-shrink: 0;
-            }
-            .picker-panel {
-                position: absolute;
-                z-index: 35;
-                right: 0;
-                top: calc(100% + 0.4rem);
-                width: min(20rem, calc(100vw - 2rem));
-                max-height: min(18rem, 55vh);
-                overflow-y: auto;
-                padding: 0.45rem;
-                border-radius: 0.8rem;
-                border: 0;
-                background: white;
-                box-shadow: 0 10px 24px rgba(var(--black), 12%);
-                display: none;
-            }
-            .picker-panel.is-open {
-                display: block;
-            }
-            #history-picker-options,
-            #model-picker-options,
-            #attachment-picker-options {
-                display: flex;
-                flex-direction: column;
-                gap: 0.1rem;
-            }
-            :global(.picker-option) {
-                display: inline-flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 0.6rem;
-                width: 100%;
-                appearance: none;
-                border: 0;
-                background: white;
-                color: rgba(var(--gray-dark), 0.88);
-                font-size: 0.85rem;
-                line-height: 1.2;
-                font-weight: 700;
-                text-align: left;
-                padding: 0.7rem 0.65rem;
-                border-radius: 0.55rem;
-                cursor: pointer;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                transition:
-                    background-color 0.2s ease,
-                    color 0.2s ease;
-            }
-            :global(.picker-option:focus),
-            :global(.picker-option:focus-visible) {
-                outline: none;
-                box-shadow: none;
-            }
-            :global(.picker-option::after) {
-                content: "›";
-                flex-shrink: 0;
-                color: rgba(var(--gray-dark), 0.32);
-                font-size: 1rem;
-                line-height: 1;
-            }
-            :global(.picker-option:hover) {
-                background: rgba(var(--accent-rgb), 0.14);
-                color: var(--accent-dark);
-            }
-            :global(.picker-option.is-selected) {
-                background: rgba(var(--accent-rgb), 0.12);
-                color: var(--accent-dark);
-            }
-            :global(.picker-option.is-selected::after) {
-                color: var(--accent);
-            }
             .stream-toggle {
                 display: inline-flex;
                 align-items: center;
@@ -622,7 +477,11 @@ import { siteConfig } from "../../config";
                                 role="listbox"
                                 aria-label="问诊记录选项"
                             >
-                                <div id="history-picker-options"></div>
+                                <div
+                                    id="history-picker-options"
+                                    class="picker-options"
+                                >
+                                </div>
                             </div>
                         </label>
                     </div>
@@ -668,7 +527,11 @@ import { siteConfig } from "../../config";
                                 role="listbox"
                                 aria-label="模型选项"
                             >
-                                <div id="model-picker-options"></div>
+                                <div
+                                    id="model-picker-options"
+                                    class="picker-options"
+                                >
+                                </div>
                             </div>
                         </label>
                         <!-- 流式开关前端显示 -->
@@ -704,7 +567,7 @@ import { siteConfig } from "../../config";
                     <textarea
                         id="user-input"
                         rows="1"
-                        placeholder="Enter 发送 , Shift+Enter 换行 , 选择附件以使用面部与舌头数据（可选）" 
+                        placeholder="Enter 发送 , Shift+Enter 换行 , 选择附件以使用面部与舌头数据（可选）"
                         required></textarea>
                     <div class="chat-form-actions">
                         <label
@@ -756,7 +619,11 @@ import { siteConfig } from "../../config";
                                 role="listbox"
                                 aria-label="附件选项"
                             >
-                                <div id="attachment-picker-options"></div>
+                                <div
+                                    id="attachment-picker-options"
+                                    class="picker-options"
+                                >
+                                </div>
                             </div>
                         </label>
                         <button id="send-btn" type="submit">发送</button>
@@ -1898,6 +1765,17 @@ import { siteConfig } from "../../config";
                         sendBtn.disabled = false;
                         inputEl.focus();
                     }
+                });
+                attachmentPickerTriggerEl?.addEventListener("click", () => {
+                    void (async () => {
+                        try {
+                            await fetchFaceAttachmentList();
+                        } catch (error) {
+                            setStatus(
+                                `读取附件列表失败：${getErrorMessage(error)}`,
+                            );
+                        }
+                    })();
                 });
 
                 formEl.addEventListener("submit", async (event) => {

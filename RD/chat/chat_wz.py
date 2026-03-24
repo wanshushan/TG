@@ -12,7 +12,7 @@ from urllib import error as url_error
 from urllib import request as url_request
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -440,11 +440,21 @@ def _list_face_record_stems(face_dir: Path) -> list[str]:
         return []
     stems: list[str] = []
     for entry in face_dir.iterdir():
-        if not entry.is_file() or entry.suffix.lower() != ".json":
+        if entry.is_dir():
+            stem = entry.name.strip()
+            if FACE_RECORD_STEM_PATTERN.match(stem):
+                json_path = entry / f"{stem}.json"
+                image_path = entry / f"{stem}.png"
+                if json_path.exists() and json_path.is_file() and image_path.exists() and image_path.is_file():
+                    stems.append(stem)
             continue
-        stem = entry.stem.strip()
-        if FACE_RECORD_STEM_PATTERN.match(stem):
-            stems.append(stem)
+
+        if entry.is_file() and entry.suffix.lower() == ".json":
+            stem = entry.stem.strip()
+            if FACE_RECORD_STEM_PATTERN.match(stem):
+                image_path = face_dir / f"{stem}.png"
+                if image_path.exists() and image_path.is_file():
+                    stems.append(stem)
     stems.sort(reverse=True)
     return stems
 
@@ -456,6 +466,20 @@ def _sanitize_face_record_stem(raw_name: str | None) -> str | None:
     if not FACE_RECORD_STEM_PATTERN.match(name):
         return None
     return name
+
+
+def _resolve_face_record_paths(face_dir: Path, stem: str) -> tuple[Path, Path]:
+    nested_json = face_dir / stem / f"{stem}.json"
+    nested_image = face_dir / stem / f"{stem}.png"
+    if nested_json.exists() and nested_json.is_file() and nested_image.exists() and nested_image.is_file():
+        return nested_json, nested_image
+
+    flat_json = face_dir / f"{stem}.json"
+    flat_image = face_dir / f"{stem}.png"
+    if flat_json.exists() and flat_json.is_file() and flat_image.exists() and flat_image.is_file():
+        return flat_json, flat_image
+
+    raise FileNotFoundError("面诊记录不存在")
 
 
 def _extract_face_prompt(face_data: Any) -> str:
@@ -480,9 +504,7 @@ def _extract_face_prompt(face_data: Any) -> str:
 
 
 def _read_face_attachment(face_dir: Path, stem: str) -> dict[str, Any]:
-    path = face_dir / f"{stem}.json"
-    if not path.exists():
-        raise FileNotFoundError("面诊记录不存在")
+    path, image_path = _resolve_face_record_paths(face_dir, stem)
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -498,6 +520,7 @@ def _read_face_attachment(face_dir: Path, stem: str) -> dict[str, Any]:
         "recordName": stem,
         "faceData": face_data if face_data is not None else {},
         "facePrompt": prompt_text,
+        "imagePath": payload.get("imagePath") if isinstance(payload.get("imagePath"), str) else image_path.as_posix(),
     }
 
 
@@ -722,7 +745,7 @@ async def chat_face_records_get(
     request: Request,
     action: str = Query(default="list"),
     name: str = Query(default=""),
-) -> JSONResponse:
+) -> Response:
     face_dir = _get_user_face_dir(request)
 
     if action == "list":
@@ -747,6 +770,24 @@ async def chat_face_records_get(
 
         return JSONResponse(
             content=attachment,
+            headers={"Cache-Control": "no-store"},
+        )
+
+    if action == "image":
+        record_stem = _sanitize_face_record_stem(name)
+        if not record_stem:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "name 参数无效，格式应为 face-yy-mm-ddThh-mm"},
+            )
+        try:
+            _, image_path = _resolve_face_record_paths(face_dir, record_stem)
+        except FileNotFoundError:
+            return JSONResponse(status_code=404, content={"error": "面诊图片不存在"})
+
+        return FileResponse(
+            image_path,
+            media_type="image/png",
             headers={"Cache-Control": "no-store"},
         )
 

@@ -257,8 +257,19 @@ def _format_result_filename(now: datetime | None = None) -> str:
 	current = now or datetime.now()
 	return (
 		f"face-{current.year % 100:02d}-{current.month:02d}-{current.day:02d}"
-		f"T{current.hour:02d}-{current.minute:02d}.json"
+		f"T{current.hour:02d}-{current.minute:02d}"
 	)
+
+
+def _build_result_paths(user_dir: Path) -> tuple[str, Path, Path, Path]:
+	base_stem = _format_result_filename()
+	stem = base_stem
+	suffix = 1
+	while (user_dir / stem).exists():
+		stem = f"{base_stem}-{suffix}"
+		suffix += 1
+	record_dir = user_dir / stem
+	return stem, record_dir, record_dir / f"{stem}.json", record_dir / f"{stem}.png"
 
 
 def _convert_to_png(raw: bytes) -> bytes:
@@ -495,25 +506,33 @@ def _parse_face_data(text: str) -> dict[str, Any]:
 
 
 def _write_face_result(
-	target_path: Path,
+	record_stem: str,
+	record_dir: Path,
+	json_path: Path,
+	image_path: Path,
+	image_bytes: bytes,
 	username: str,
 	model_name: str,
 	selected_option_name: str,
 	prompt_text: str,
 	output_text: str,
 ) -> None:
+	record_dir.mkdir(parents=True, exist_ok=True)
+	image_path.write_bytes(image_bytes)
+	relative_image_path = f"data/face/{username}/{record_stem}/{image_path.name}"
 	payload = {
-		"recordName": target_path.stem,
+		"recordName": record_stem,
 		"owner": username,
 		"updatedAt": datetime.now().isoformat(),
 		"model": model_name,
 		"selectedOptionName": selected_option_name,
 		"prompt": prompt_text,
+		"imagePath": relative_image_path,
 		"faceData": _parse_face_data(output_text),
 	}
-	temp_path = target_path.with_suffix(".tmp")
+	temp_path = json_path.with_suffix(".tmp")
 	temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-	temp_path.replace(target_path)
+	temp_path.replace(json_path)
 
 
 @router.post("/api/face/doc")
@@ -603,7 +622,7 @@ async def stream_face_doc(
 		)
 
 	username, user_dir = _get_user_face_dir(request)
-	target_path = user_dir / _format_result_filename()
+	record_stem, record_dir, json_path, image_path = _build_result_paths(user_dir)
 
 	def plain_text_stream():
 		pieces: list[str] = []
@@ -632,7 +651,11 @@ async def stream_face_doc(
 			final_text = "".join(pieces)
 			with _STORE_LOCK:
 				_write_face_result(
-					target_path=target_path,
+					record_stem=record_stem,
+					record_dir=record_dir,
+					json_path=json_path,
+					image_path=image_path,
+					image_bytes=png_bytes,
 					username=username,
 					model_name=active_model,
 					selected_option_name=resolved.name,
@@ -646,7 +669,8 @@ async def stream_face_doc(
 		headers={
 			"Cache-Control": "no-store",
 			"X-Resolved-Model": active_model,
-			"X-Result-File": f"data/face/{username}/{target_path.name}",
+			"X-Result-File": f"data/face/{username}/{record_stem}/{json_path.name}",
+			"X-Image-File": f"data/face/{username}/{record_stem}/{image_path.name}",
 			"X-Stream-Enabled": "true",
 		},
 	)

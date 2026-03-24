@@ -40,6 +40,19 @@ const markdownFontScale = getMarkdownRenderConfig().fontScale;
                 word-break: break-word;
             }
 
+            :global(.home-content h2 a),
+            :global(.home-content h3 a) {
+                color: rgb(var(--black));
+                font-weight: 700;
+                text-decoration: none;
+                transition: color 0.2s ease;
+            }
+
+            :global(.home-content h2 a:hover),
+            :global(.home-content h3 a:hover) {
+                color: var(--accent);
+            }
+
             @media (min-width: 721px) {
                 .home-content {
                     width: var(--markdown-content-desktop-width);

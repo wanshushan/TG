@@ -1,9 +1,53 @@
-# HI，这是 灵·诊
+import { ShuffleStackGallery, TypingTitle } from "./ele.jsx";
+
+<TypingTitle
+  client:load
+  text="HI，I'm 灵·诊"
+  fontSize="clamp(2rem, 12vw, 7.5rem)"
+  duration={2.8}
+/>
+
+**记录你的身体，分析你的健康**  
+<br />
+<style>
+  {`
+    .home-nav-desktop {
+      display: block;
+    }
+
+    .home-nav-mobile {
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      .home-nav-desktop {
+        display: none;
+      }
+
+      .home-nav-mobile {
+        display: block;
+      }
+    }
+  `}
+</style>
+
+<h2 class="home-nav-desktop">-- <a href="/face">面诊</a> · <a href="/tg">舌诊</a> · <a href="/project">问诊</a> · <a href="/user">记录</a> --</h2>
+<h3 class="home-nav-mobile">-- <a href="/face">面诊</a> · <a href="/tg">舌诊</a> · <a href="/project">问诊</a> · <a href="/user">记录</a> --</h3>
 
 <br />
-## --前端基于 astro 构建--
+{/* vw控制移动端，rem控制桌面端 */}
+<ShuffleStackGallery
+  client:load
+  intervalMs={2000}
+  size="lg"
+  cardWidth="min(85vw, 70rem)"
+  mdBoxWidth="min(90vw, 70rem)"
+  mdBoxHeight="40rem"
+  items={[
+    { src: "face.png", alt: "面诊", href: "/face", mdPath: "FE/src/content/index/face.md" },
+    { src: "tg.png", alt: "舌诊", href: "/tg", mdPath: "FE/src/content/index/tg.md" },
+    { src: "ask.png", alt: "问诊", href: "/project", mdPath: "FE/src/content/index/ask.md" },
+    { src: "user.png", alt: "用户中心", href: "/user", mdPath: "FE/src/content/index/user.md" },
+  ]}
+/>
 
-你好！
-1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-
-请输入文本
