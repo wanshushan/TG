@@ -19,5 +19,12 @@
     "bio": "你好，111！欢迎使用灵·诊。",
     "avatar": "",
     "links": []
+  },
+  "www": {
+    "passwordSalt": "587911c649701f13ff194f338e9ab570",
+    "passwordHash": "41099114dc41e9b43d62bcc6d5f8a2cfd03ba6dd0edcbddf07ca180e1a30f9d4",
+    "bio": "你好，www！欢迎使用灵·诊。",
+    "avatar": "",
+    "links": []
   }
 }

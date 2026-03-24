@@ -281,6 +281,7 @@ import { siteConfig } from "../../config";
                 margin: 0;
                 min-height: 2.9rem;
                 max-height: 10rem;
+                box-sizing: border-box;
                 padding: 0.72rem 0.8rem;
                 border: 1px solid rgba(var(--gray), 0.56);
                 border-radius: var(--chat-radius-sm);
@@ -289,6 +290,27 @@ import { siteConfig } from "../../config";
                 font-size: 0.95rem;
                 line-height: 1.45;
                 resize: none;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                scroll-behavior: smooth;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(var(--gray), 0.6)
+                    rgba(var(--gray-light), 0.55);
+            }
+            .chat-form textarea::-webkit-scrollbar {
+                width: 6px;
+            }
+            .chat-form textarea::-webkit-scrollbar-track {
+                background: rgba(var(--gray-light), 0.55);
+                border-radius: 999px;
+            }
+            .chat-form textarea::-webkit-scrollbar-thumb {
+                background: rgba(var(--gray), 0.6);
+                border-radius: 999px;
+            }
+            .chat-form textarea::-webkit-scrollbar-thumb:hover {
+                background: rgba(var(--gray), 0.8);
             }
             .chat-form textarea:focus {
                 outline: 2px solid rgba(var(--accent-rgb), 0.3);
@@ -313,8 +335,17 @@ import { siteConfig } from "../../config";
                 flex-direction: column;
                 align-items: stretch;
                 gap: 0.45rem;
-                width: 11.5rem;
+                width: 21rem;
                 flex-shrink: 0;
+            }
+            .attachment-row {
+                display: flex;
+                align-items: stretch;
+                gap: 0.45rem;
+            }
+            .attachment-row .attachment-picker {
+                flex: 1;
+                min-width: 0;
             }
             .attachment-picker {
                 display: inline-flex;
@@ -338,6 +369,9 @@ import { siteConfig } from "../../config";
             }
             .attachment-picker .picker-trigger-label {
                 color: white;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             }
             .attachment-picker .picker-trigger-icon {
                 color: white;
@@ -561,6 +595,8 @@ import { siteConfig } from "../../config";
                     <div id="empty-state" class="empty-state">
                         <h2>新问诊</h2>
                         <p>-输入问题开始吧-</p>
+                        <p>（提示：如果需要使用面诊或舌诊数据，请先选择对应的附件）</p>
+                        <p>你可以描述症状，也可以上传附件分析身体情况</p>
                     </div>
                 </section>
                 <form id="chat-form" class="chat-form">
@@ -570,62 +606,104 @@ import { siteConfig } from "../../config";
                         placeholder="Enter 发送 , Shift+Enter 换行 , 选择附件以使用面部与舌头数据（可选）"
                         required></textarea>
                     <div class="chat-form-actions">
-                        <label
-                            class="attachment-picker picker-more"
-                            for="attachment-select"
-                            id="attachment-picker-root"
-                        >
-                            <span>附件</span>
-                            <select
-                                id="attachment-select"
-                                class="picker-native"
-                                aria-label="选择面诊附件"></select>
-                            <button
-                                id="attachment-picker-trigger"
-                                class="picker-trigger"
-                                type="button"
-                                aria-haspopup="listbox"
-                                aria-expanded="false"
-                                aria-controls="attachment-picker-panel"
+                        <div class="attachment-row">
+                            <label
+                                class="attachment-picker picker-more"
+                                for="attachment-face-select"
+                                id="attachment-face-picker-root"
                             >
-                                <span
-                                    id="attachment-picker-label"
-                                    class="picker-trigger-label">不附加</span
+                                <span>面诊附件</span>
+                                <select
+                                    id="attachment-face-select"
+                                    class="picker-native"
+                                    aria-label="选择面诊附件"></select>
+                                <button
+                                    id="attachment-face-picker-trigger"
+                                    class="picker-trigger"
+                                    type="button"
+                                    aria-haspopup="listbox"
+                                    aria-expanded="false"
+                                    aria-controls="attachment-face-picker-panel"
                                 >
-                                <!-- <svg
-                                    class="picker-trigger-icon"
-                                    viewBox="0 0 24 24"
-                                    width="14"
-                                    height="14"
-                                    aria-hidden="true"
-                                >
-                                    <path d="M7 10l5 5 5-5z"></path>
-                                </svg> -->
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="18"
-                                    height="22"
-                                    viewBox="0 0 448 512"
-                                    ><!-- Icon from Font Awesome 6 Regular by Dave Gandy - https://creativecommons.org/licenses/by/4.0/ -->
-                                    <path
-                                        fill="currentColor"
-                                        d="M384 336H192c-8.8 0-16-7.2-16-16V64c0-8.8 7.2-16 16-16h140.1l67.9 67.9V320c0 8.8-7.2 16-16 16m-192 48h192c35.3 0 64-28.7 64-64V115.9c0-12.7-5.1-24.9-14.1-33.9l-67.8-67.9c-9-9-21.2-14.1-33.9-14.1H192c-35.3 0-64 28.7-64 64v256c0 35.3 28.7 64 64 64M64 128c-35.3 0-64 28.7-64 64v256c0 35.3 28.7 64 64 64h192c35.3 0 64-28.7 64-64v-32h-48v32c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V192c0-8.8 7.2-16 16-16h32v-48z"
-                                    ></path></svg
-                                >
-                            </button>
-                            <div
-                                id="attachment-picker-panel"
-                                class="picker-panel"
-                                role="listbox"
-                                aria-label="附件选项"
-                            >
+                                    <span
+                                        id="attachment-face-picker-label"
+                                        class="picker-trigger-label"
+                                        >不附加</span
+                                    >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="18"
+                                        height="22"
+                                        viewBox="0 0 448 512"
+                                        ><!-- Icon from Font Awesome 6 Regular by Dave Gandy - https://creativecommons.org/licenses/by/4.0/ -->
+                                        <path
+                                            fill="currentColor"
+                                            d="M384 336H192c-8.8 0-16-7.2-16-16V64c0-8.8 7.2-16 16-16h140.1l67.9 67.9V320c0 8.8-7.2 16-16 16m-192 48h192c35.3 0 64-28.7 64-64V115.9c0-12.7-5.1-24.9-14.1-33.9l-67.8-67.9c-9-9-21.2-14.1-33.9-14.1H192c-35.3 0-64 28.7-64 64v256c0 35.3 28.7 64 64 64M64 128c-35.3 0-64 28.7-64 64v256c0 35.3 28.7 64 64 64h192c35.3 0 64-28.7 64-64v-32h-48v32c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V192c0-8.8 7.2-16 16-16h32v-48z"
+                                        ></path></svg
+                                    >
+                                </button>
                                 <div
-                                    id="attachment-picker-options"
-                                    class="picker-options"
+                                    id="attachment-face-picker-panel"
+                                    class="picker-panel"
+                                    role="listbox"
+                                    aria-label="面诊附件选项"
                                 >
+                                    <div
+                                        id="attachment-face-picker-options"
+                                        class="picker-options"
+                                    >
+                                    </div>
                                 </div>
-                            </div>
-                        </label>
+                            </label>
+                            <label
+                                class="attachment-picker picker-more"
+                                for="attachment-tg-select"
+                                id="attachment-tg-picker-root"
+                            >
+                                <span>舌诊附件</span>
+                                <select
+                                    id="attachment-tg-select"
+                                    class="picker-native"
+                                    aria-label="选择舌诊附件"></select>
+                                <button
+                                    id="attachment-tg-picker-trigger"
+                                    class="picker-trigger"
+                                    type="button"
+                                    aria-haspopup="listbox"
+                                    aria-expanded="false"
+                                    aria-controls="attachment-tg-picker-panel"
+                                >
+                                    <span
+                                        id="attachment-tg-picker-label"
+                                        class="picker-trigger-label"
+                                        >不附加</span
+                                    >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="18"
+                                        height="22"
+                                        viewBox="0 0 448 512"
+                                        ><!-- Icon from Font Awesome 6 Regular by Dave Gandy - https://creativecommons.org/licenses/by/4.0/ -->
+                                        <path
+                                            fill="currentColor"
+                                            d="M384 336H192c-8.8 0-16-7.2-16-16V64c0-8.8 7.2-16 16-16h140.1l67.9 67.9V320c0 8.8-7.2 16-16 16m-192 48h192c35.3 0 64-28.7 64-64V115.9c0-12.7-5.1-24.9-14.1-33.9l-67.8-67.9c-9-9-21.2-14.1-33.9-14.1H192c-35.3 0-64 28.7-64 64v256c0 35.3 28.7 64 64 64M64 128c-35.3 0-64 28.7-64 64v256c0 35.3 28.7 64 64 64h192c35.3 0 64-28.7 64-64v-32h-48v32c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V192c0-8.8 7.2-16 16-16h32v-48z"
+                                        ></path></svg
+                                    >
+                                </button>
+                                <div
+                                    id="attachment-tg-picker-panel"
+                                    class="picker-panel"
+                                    role="listbox"
+                                    aria-label="舌诊附件选项"
+                                >
+                                    <div
+                                        id="attachment-tg-picker-options"
+                                        class="picker-options"
+                                    >
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
                         <button id="send-btn" type="submit">发送</button>
                     </div>
                 </form>
@@ -648,6 +726,9 @@ import { siteConfig } from "../../config";
             const formEl = document.querySelector(
                 "#chat-form",
             ) as HTMLFormElement | null;
+            const chatFormActionsEl = document.querySelector(
+                ".chat-form-actions",
+            ) as HTMLDivElement | null;
             const inputEl = document.querySelector(
                 "#user-input",
             ) as HTMLTextAreaElement | null;
@@ -696,27 +777,46 @@ import { siteConfig } from "../../config";
             const modelPickerOptionsEl = document.querySelector(
                 "#model-picker-options",
             ) as HTMLDivElement | null;
-            const attachmentSelectEl = document.querySelector(
-                "#attachment-select",
+            const attachmentFaceSelectEl = document.querySelector(
+                "#attachment-face-select",
             ) as HTMLSelectElement | null;
-            const attachmentPickerRootEl = document.querySelector(
-                "#attachment-picker-root",
+            const attachmentFacePickerRootEl = document.querySelector(
+                "#attachment-face-picker-root",
             ) as HTMLLabelElement | null;
-            const attachmentPickerTriggerEl = document.querySelector(
-                "#attachment-picker-trigger",
+            const attachmentFacePickerTriggerEl = document.querySelector(
+                "#attachment-face-picker-trigger",
             ) as HTMLButtonElement | null;
-            const attachmentPickerLabelEl = document.querySelector(
-                "#attachment-picker-label",
+            const attachmentFacePickerLabelEl = document.querySelector(
+                "#attachment-face-picker-label",
             ) as HTMLSpanElement | null;
-            const attachmentPickerPanelEl = document.querySelector(
-                "#attachment-picker-panel",
+            const attachmentFacePickerPanelEl = document.querySelector(
+                "#attachment-face-picker-panel",
             ) as HTMLDivElement | null;
-            const attachmentPickerOptionsEl = document.querySelector(
-                "#attachment-picker-options",
+            const attachmentFacePickerOptionsEl = document.querySelector(
+                "#attachment-face-picker-options",
+            ) as HTMLDivElement | null;
+            const attachmentTgSelectEl = document.querySelector(
+                "#attachment-tg-select",
+            ) as HTMLSelectElement | null;
+            const attachmentTgPickerRootEl = document.querySelector(
+                "#attachment-tg-picker-root",
+            ) as HTMLLabelElement | null;
+            const attachmentTgPickerTriggerEl = document.querySelector(
+                "#attachment-tg-picker-trigger",
+            ) as HTMLButtonElement | null;
+            const attachmentTgPickerLabelEl = document.querySelector(
+                "#attachment-tg-picker-label",
+            ) as HTMLSpanElement | null;
+            const attachmentTgPickerPanelEl = document.querySelector(
+                "#attachment-tg-picker-panel",
+            ) as HTMLDivElement | null;
+            const attachmentTgPickerOptionsEl = document.querySelector(
+                "#attachment-tg-picker-options",
             ) as HTMLDivElement | null;
             const configUrl = "/api/chat/config";
             const chatProxyUrl = "/api/chat";
             const faceAttachmentUrl = "/api/chat/face";
+            const tgAttachmentUrl = "/api/tg/history";
             let apiEndpoint = "";
             let model = "llama3.2";
             let selectedOptionName = "";
@@ -741,10 +841,14 @@ import { siteConfig } from "../../config";
             const chatHistory: ChatHistoryMessage[] = [];
             let syncModelPickerMenu = () => {};
             let syncHistoryPickerMenu = () => {};
-            let syncAttachmentPickerMenu = () => {};
+            let syncFaceAttachmentPickerMenu = () => {};
+            let syncTgAttachmentPickerMenu = () => {};
             let faceAttachmentRecords: string[] = [];
             let selectedFaceAttachmentName = "";
             let selectedFacePrompt = "";
+            let tgAttachmentRecords: string[] = [];
+            let selectedTgAttachmentName = "";
+            let selectedTgPrompt = "";
 
             function normalizeTemperature(value: unknown): number | null {
                 if (typeof value === "number" && Number.isFinite(value)) {
@@ -1069,8 +1173,9 @@ import { siteConfig } from "../../config";
                 if (!inputEl) {
                     return;
                 }
-                inputEl.style.height = "auto";
-                inputEl.style.height = `${Math.min(inputEl.scrollHeight, 160)}px`;
+                const actionsHeight = chatFormActionsEl?.offsetHeight ?? 0;
+                inputEl.style.height = `${actionsHeight > 0 ? actionsHeight : 46}px`;
+                inputEl.scrollTop = inputEl.scrollHeight;
             }
 
             function getErrorMessage(error: unknown): string {
@@ -1260,31 +1365,58 @@ import { siteConfig } from "../../config";
                 syncHistoryPickerMenu();
             }
 
-            function renderAttachmentOptions() {
-                if (!attachmentSelectEl) {
+            function renderFaceAttachmentOptions() {
+                if (!attachmentFaceSelectEl) {
                     return;
                 }
 
-                attachmentSelectEl.innerHTML = "";
+                attachmentFaceSelectEl.innerHTML = "";
 
                 const noneOption = document.createElement("option");
                 noneOption.value = "";
                 noneOption.textContent = "不附加";
-                attachmentSelectEl.appendChild(noneOption);
+                attachmentFaceSelectEl.appendChild(noneOption);
 
                 for (const recordName of faceAttachmentRecords) {
                     const optionEl = document.createElement("option");
                     optionEl.value = recordName;
                     optionEl.textContent = recordName;
-                    attachmentSelectEl.appendChild(optionEl);
+                    attachmentFaceSelectEl.appendChild(optionEl);
                 }
 
-                attachmentSelectEl.value =
+                attachmentFaceSelectEl.value =
                     selectedFaceAttachmentName &&
                     faceAttachmentRecords.includes(selectedFaceAttachmentName)
                         ? selectedFaceAttachmentName
                         : "";
-                syncAttachmentPickerMenu();
+                syncFaceAttachmentPickerMenu();
+            }
+
+            function renderTgAttachmentOptions() {
+                if (!attachmentTgSelectEl) {
+                    return;
+                }
+
+                attachmentTgSelectEl.innerHTML = "";
+
+                const noneOption = document.createElement("option");
+                noneOption.value = "";
+                noneOption.textContent = "不附加";
+                attachmentTgSelectEl.appendChild(noneOption);
+
+                for (const recordName of tgAttachmentRecords) {
+                    const optionEl = document.createElement("option");
+                    optionEl.value = recordName;
+                    optionEl.textContent = recordName;
+                    attachmentTgSelectEl.appendChild(optionEl);
+                }
+
+                attachmentTgSelectEl.value =
+                    selectedTgAttachmentName &&
+                    tgAttachmentRecords.includes(selectedTgAttachmentName)
+                        ? selectedTgAttachmentName
+                        : "";
+                syncTgAttachmentPickerMenu();
             }
 
             async function fetchFaceAttachmentList() {
@@ -1315,7 +1447,35 @@ import { siteConfig } from "../../config";
                     : [];
 
                 faceAttachmentRecords = sortRecordNames(records);
-                renderAttachmentOptions();
+                renderFaceAttachmentOptions();
+            }
+
+            async function fetchTgAttachmentList() {
+                const response = await fetch(`${tgAttachmentUrl}?action=list`, {
+                    cache: "no-store",
+                    credentials: "include",
+                });
+                if (!response.ok) {
+                    throw new Error(
+                        `读取舌诊附件列表失败：HTTP ${response.status}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    records?: unknown;
+                };
+                const records = Array.isArray(payload.records)
+                    ? payload.records
+                          .filter(
+                              (value): value is string =>
+                                  typeof value === "string",
+                          )
+                          .map((value) => value.trim())
+                          .filter((value) => value.length > 0)
+                    : [];
+
+                tgAttachmentRecords = sortRecordNames(records);
+                renderTgAttachmentOptions();
             }
 
             async function loadFaceAttachmentByName(recordName: string) {
@@ -1344,6 +1504,41 @@ import { siteConfig } from "../../config";
                         : "";
                 selectedFacePrompt = promptText;
                 selectedFaceAttachmentName =
+                    typeof payload.recordName === "string"
+                        ? payload.recordName.trim()
+                        : recordName;
+            }
+
+            async function loadTgAttachmentByName(recordName: string) {
+                const response = await fetch(
+                    `${tgAttachmentUrl}?action=load&name=${encodeURIComponent(recordName)}`,
+                    {
+                        cache: "no-store",
+                        credentials: "include",
+                    },
+                );
+                if (!response.ok) {
+                    const detail = (await response.text()).trim();
+                    throw new Error(
+                        `读取舌诊附件失败：HTTP ${response.status}${detail ? ` - ${detail}` : ""}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    tgData?: unknown;
+                    recordName?: unknown;
+                };
+
+                const tgData = payload.tgData;
+                const rawText =
+                    tgData &&
+                    typeof tgData === "object" &&
+                    typeof (tgData as { rawText?: unknown }).rawText ===
+                        "string"
+                        ? (tgData as { rawText: string }).rawText.trim()
+                        : "";
+                selectedTgPrompt = rawText;
+                selectedTgAttachmentName =
                     typeof payload.recordName === "string"
                         ? payload.recordName.trim()
                         : recordName;
@@ -1672,17 +1867,27 @@ import { siteConfig } from "../../config";
                     optionsEl: historyPickerOptionsEl,
                     emptyLabel: "当前会话",
                 });
-                syncAttachmentPickerMenu = setupPickerMenu({
-                    rootEl: attachmentPickerRootEl,
-                    selectEl: attachmentSelectEl,
-                    triggerEl: attachmentPickerTriggerEl,
-                    labelEl: attachmentPickerLabelEl,
-                    panelEl: attachmentPickerPanelEl,
-                    optionsEl: attachmentPickerOptionsEl,
+                syncFaceAttachmentPickerMenu = setupPickerMenu({
+                    rootEl: attachmentFacePickerRootEl,
+                    selectEl: attachmentFaceSelectEl,
+                    triggerEl: attachmentFacePickerTriggerEl,
+                    labelEl: attachmentFacePickerLabelEl,
+                    panelEl: attachmentFacePickerPanelEl,
+                    optionsEl: attachmentFacePickerOptionsEl,
+                    emptyLabel: "不附加",
+                });
+                syncTgAttachmentPickerMenu = setupPickerMenu({
+                    rootEl: attachmentTgPickerRootEl,
+                    selectEl: attachmentTgSelectEl,
+                    triggerEl: attachmentTgPickerTriggerEl,
+                    labelEl: attachmentTgPickerLabelEl,
+                    panelEl: attachmentTgPickerPanelEl,
+                    optionsEl: attachmentTgPickerOptionsEl,
                     emptyLabel: "不附加",
                 });
 
                 inputEl.addEventListener("input", autoResizeInput);
+                window.addEventListener("resize", autoResizeInput);
                 inputEl.addEventListener("keydown", (event) => {
                     if (event.key === "Enter" && !event.shiftKey) {
                         event.preventDefault();
@@ -1742,12 +1947,13 @@ import { siteConfig } from "../../config";
                         inputEl.focus();
                     }
                 });
-                attachmentSelectEl?.addEventListener("change", async () => {
-                    const selectedAttachment = attachmentSelectEl.value.trim();
+                attachmentFaceSelectEl?.addEventListener("change", async () => {
+                    const selectedAttachment =
+                        attachmentFaceSelectEl.value.trim();
                     if (!selectedAttachment) {
                         selectedFaceAttachmentName = "";
                         selectedFacePrompt = "";
-                        setStatus("已取消附件。将仅使用问诊基础提示词。");
+                        setStatus("已取消面诊附件。将仅使用问诊基础提示词。");
                         return;
                     }
 
@@ -1758,21 +1964,59 @@ import { siteConfig } from "../../config";
                     } catch (error) {
                         selectedFaceAttachmentName = "";
                         selectedFacePrompt = "";
-                        attachmentSelectEl.value = "";
-                        syncAttachmentPickerMenu();
+                        attachmentFaceSelectEl.value = "";
+                        syncFaceAttachmentPickerMenu();
                         setStatus(`附件加载失败：${getErrorMessage(error)}`);
                     } finally {
                         sendBtn.disabled = false;
                         inputEl.focus();
                     }
                 });
-                attachmentPickerTriggerEl?.addEventListener("click", () => {
+                attachmentFacePickerTriggerEl?.addEventListener("click", () => {
                     void (async () => {
                         try {
                             await fetchFaceAttachmentList();
                         } catch (error) {
                             setStatus(
                                 `读取附件列表失败：${getErrorMessage(error)}`,
+                            );
+                        }
+                    })();
+                });
+                attachmentTgSelectEl?.addEventListener("change", async () => {
+                    const selectedAttachment =
+                        attachmentTgSelectEl.value.trim();
+                    if (!selectedAttachment) {
+                        selectedTgAttachmentName = "";
+                        selectedTgPrompt = "";
+                        setStatus("已取消舌诊附件。将仅使用问诊基础提示词。");
+                        return;
+                    }
+
+                    sendBtn.disabled = true;
+                    try {
+                        await loadTgAttachmentByName(selectedAttachment);
+                        setStatus(`已附加舌诊数据：${selectedAttachment}`);
+                    } catch (error) {
+                        selectedTgAttachmentName = "";
+                        selectedTgPrompt = "";
+                        attachmentTgSelectEl.value = "";
+                        syncTgAttachmentPickerMenu();
+                        setStatus(
+                            `舌诊附件加载失败：${getErrorMessage(error)}`,
+                        );
+                    } finally {
+                        sendBtn.disabled = false;
+                        inputEl.focus();
+                    }
+                });
+                attachmentTgPickerTriggerEl?.addEventListener("click", () => {
+                    void (async () => {
+                        try {
+                            await fetchTgAttachmentList();
+                        } catch (error) {
+                            setStatus(
+                                `读取舌诊附件列表失败：${getErrorMessage(error)}`,
                             );
                         }
                     })();
@@ -1825,6 +2069,20 @@ import { siteConfig } from "../../config";
                                 const item = requestHistory[index];
                                 if (item.role === "user") {
                                     item.content = `${item.content}\n\n【面诊附件数据（${selectedFaceAttachmentName || "未命名"}）】\n${selectedFacePrompt}`;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (selectedTgPrompt) {
+                            for (
+                                let index = requestHistory.length - 1;
+                                index >= 0;
+                                index -= 1
+                            ) {
+                                const item = requestHistory[index];
+                                if (item.role === "user") {
+                                    item.content = `${item.content}\n\n【舌诊附件数据（${selectedTgAttachmentName || "未命名"}）】\n${selectedTgPrompt}`;
                                     break;
                                 }
                             }
@@ -1948,6 +2206,7 @@ import { siteConfig } from "../../config";
                     try {
                         await fetchRecordList();
                         await fetchFaceAttachmentList();
+                        await fetchTgAttachmentList();
                     } catch (error) {
                         setStatus(
                             `读取历史记录失败：${getErrorMessage(error)}`,

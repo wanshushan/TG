@@ -7,6 +7,11 @@ const markdownSources = import.meta.glob("./*.md", {
     import: "default",
 });
 
+const imageSources = import.meta.glob("./*.png", {
+    eager: true,
+    import: "default",
+});
+
 function normalizePath(path) {
     return String(path || "").trim().replaceAll("\\", "/").toLowerCase();
 }
@@ -37,6 +42,36 @@ function resolveMarkdownByPath(mdPath) {
 
     const content = markdownSources[matchedKey];
     return typeof content === "string" ? content : "";
+}
+
+function resolveImageByPath(imagePath) {
+    const original = String(imagePath || "").trim();
+    const normalizedPath = normalizePath(original);
+    if (!normalizedPath) {
+        return "";
+    }
+
+    const direct = imageSources[original] || imageSources[normalizedPath];
+    if (typeof direct === "string") {
+        return direct;
+    }
+
+    const matchedKey = Object.keys(imageSources).find((key) => {
+        const normalizedKey = normalizePath(key);
+        const normalizedKeyWithoutDot = normalizedKey.replace(/^\.\//, "");
+        return (
+            normalizedKey === normalizedPath ||
+            normalizedPath.endsWith(normalizedKey) ||
+            normalizedPath.endsWith(normalizedKeyWithoutDot)
+        );
+    });
+
+    if (!matchedKey) {
+        return original;
+    }
+
+    const content = imageSources[matchedKey];
+    return typeof content === "string" ? content : original;
 }
 
 export function H({ width = "100%", children }) {
@@ -251,6 +286,8 @@ export function ShuffleStackGallery({
                 {safeItems.map((item, index) => {
                     const position = positionMap.get(index) ?? 0;
                     const isHovered = hoveredIndex === index;
+                    const defaultImageSrc = resolveImageByPath(item.src);
+                    const mobileImageSrc = resolveImageByPath(item.srcMobile);
 
                     return (
                         <a
@@ -280,15 +317,33 @@ export function ShuffleStackGallery({
                                 background: "#fff",
                             }}
                         >
-                            <img
-                                src={item.src}
-                                alt={item.alt || ""}
-                                style={{
-                                    width: "100%",
-                                    height: "auto",
-                                    display: "block",
-                                }}
-                            />
+                            {mobileImageSrc ? (
+                                <picture>
+                                    <source
+                                        media="(max-width: 768px)"
+                                        srcSet={mobileImageSrc}
+                                    />
+                                    <img
+                                        src={defaultImageSrc}
+                                        alt={item.alt || ""}
+                                        style={{
+                                            width: "100%",
+                                            height: "auto",
+                                            display: "block",
+                                        }}
+                                    />
+                                </picture>
+                            ) : (
+                                <img
+                                    src={defaultImageSrc}
+                                    alt={item.alt || ""}
+                                    style={{
+                                        width: "100%",
+                                        height: "auto",
+                                        display: "block",
+                                    }}
+                                />
+                            )}
                         </a>
                     );
                 })}
@@ -299,10 +354,11 @@ export function ShuffleStackGallery({
                     width: mdBoxWidth,
                     maxWidth: "100%",
                     height: mdBoxHeight,
-                    padding: "0.9rem 1rem",
-                    borderRadius: "0.8rem",
-                    border: "1px solid rgba(128, 128, 128, 0.25)",
-                    background: "rgba(255, 255, 255, 0.65)",
+                    padding: "1rem 1.1rem",
+                    borderRadius: cardRadius,
+                    border: "1px solid rgba(0, 0, 0, 0.06)",
+                    boxShadow: "0 6px 14px rgba(0, 0, 0, 0.12)",
+                    background: "#fff",
                     textAlign: "left",
                     lineHeight: "1.7",
                     overflowWrap: "anywhere",

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse
+
+from .ay_color_sprit import predict_color_spirit
 
 try:
 	from PIL import Image, UnidentifiedImageError
@@ -18,6 +21,8 @@ router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parent.parent
 TG_DATA_DIR = BASE_DIR / "data" / "tg"
 _MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+_TG_MODEL_DIR = Path(__file__).resolve().parent / "ay_color_sprit"
+TG_RECORD_STEM_PATTERN = re.compile(r"^tg-\d{2}-\d{2}-\d{2}T\d{2}-\d{2}(?:-\d+)?$")
 
 
 def _safe_username(username: str) -> str:
@@ -37,15 +42,134 @@ def _get_session_username(request: Request) -> str:
 def _format_filename(now: datetime | None = None) -> str:
 	current = now or datetime.now()
 	return (
-		f"{current.year % 100:02d}-{current.month:02d}-{current.day:02d}"
+		f"tg-{current.year % 100:02d}-{current.month:02d}-{current.day:02d}"
 		f"T{current.hour:02d}-{current.minute:02d}"
 	)
 
 
-def _build_target_path(username: str) -> Path:
+def _get_user_tg_dir(request: Request) -> tuple[str, Path]:
+	username = _safe_username(_get_session_username(request))
+	directory = TG_DATA_DIR / username
+	directory.mkdir(parents=True, exist_ok=True)
+	return username, directory
+
+
+def _build_result_paths(user_dir: Path) -> tuple[str, Path, Path, Path]:
+	base_stem = _format_filename()
+	stem = base_stem
+	suffix = 1
+	while (user_dir / stem).exists():
+		stem = f"{base_stem}-{suffix}"
+		suffix += 1
+	record_dir = user_dir / stem
+	return stem, record_dir, record_dir / f"{stem}.json", record_dir / f"{stem}.png"
+
+
+def _extract_result_fields(result_text: str) -> tuple[str, str]:
+	color = ""
+	spirit = ""
+	for line in result_text.splitlines():
+		stripped = line.strip()
+		if stripped.startswith("【苔色】："):
+			color = stripped.replace("【苔色】：", "", 1).strip()
+		elif stripped.startswith("【舌神】："):
+			spirit = stripped.replace("【舌神】：", "", 1).strip()
+	return color, spirit
+
+
+def _write_tg_result(
+	record_stem: str,
+	record_dir: Path,
+	json_path: Path,
+	image_path: Path,
+	image_bytes: bytes,
+	username: str,
+	result_text: str,
+) -> tuple[str, str]:
+	record_dir.mkdir(parents=True, exist_ok=True)
+	image_path.write_bytes(image_bytes)
+	relative_image_path = f"data/tg/{username}/{record_stem}/{image_path.name}"
+	relative_json_path = f"data/tg/{username}/{record_stem}/{json_path.name}"
+	color, spirit = _extract_result_fields(result_text)
+	payload = {
+		"recordName": record_stem,
+		"owner": username,
+		"updatedAt": datetime.now().isoformat(),
+		"imagePath": relative_image_path,
+		"tgData": {
+			"color": color,
+			"spirit": spirit,
+			"rawText": result_text,
+		},
+	}
+	temp_path = json_path.with_suffix(".tmp")
+	temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+	temp_path.replace(json_path)
+	return relative_image_path, relative_json_path
+
+
+def _resolve_record_dir(user_dir: Path, record_name: str) -> Path:
+	name = record_name.strip()
+	if not TG_RECORD_STEM_PATTERN.fullmatch(name):
+		raise HTTPException(status_code=400, detail="记录名称不合法")
+	record_dir = user_dir / name
+	if not record_dir.exists() or not record_dir.is_dir():
+		raise HTTPException(status_code=404, detail="记录不存在")
+	return record_dir
+
+
+def _list_record_names(user_dir: Path) -> list[str]:
+	if not user_dir.exists():
+		return []
+	result: list[str] = []
+	for child in user_dir.iterdir():
+		if not child.is_dir():
+			continue
+		name = child.name
+		if not TG_RECORD_STEM_PATTERN.fullmatch(name):
+			continue
+		if (child / f"{name}.json").exists():
+			result.append(name)
+	return sorted(result, reverse=True)
+
+
+@router.get("/api/tg/history")
+async def tg_history(
+	request: Request,
+	action: str = Query(default="list"),
+	name: str | None = Query(default=None),
+):
+	username = _safe_username(_get_session_username(request))
 	user_dir = TG_DATA_DIR / username
-	user_dir.mkdir(parents=True, exist_ok=True)
-	return user_dir / f"{_format_filename()}.png"
+
+	if action == "list":
+		return JSONResponse(content={"records": _list_record_names(user_dir)})
+
+	if not name:
+		raise HTTPException(status_code=400, detail="缺少记录名称")
+
+	record_dir = _resolve_record_dir(user_dir, name)
+	record_name = record_dir.name
+	json_path = record_dir / f"{record_name}.json"
+	image_path = record_dir / f"{record_name}.png"
+
+	if action == "load":
+		if not json_path.exists():
+			raise HTTPException(status_code=404, detail="记录文件不存在")
+		try:
+			payload = json.loads(json_path.read_text(encoding="utf-8"))
+		except (OSError, json.JSONDecodeError) as exc:
+			raise HTTPException(status_code=500, detail="记录文件读取失败") from exc
+		if not isinstance(payload, dict):
+			raise HTTPException(status_code=500, detail="记录文件格式错误")
+		return JSONResponse(content=payload)
+
+	if action == "image":
+		if not image_path.exists():
+			raise HTTPException(status_code=404, detail="记录图片不存在")
+		return FileResponse(path=image_path, media_type="image/png")
+
+	raise HTTPException(status_code=400, detail="不支持的动作")
 
 
 def _convert_to_png(raw: bytes) -> bytes:
@@ -78,16 +202,39 @@ async def upload_tg_image(request: Request, image: UploadFile = File(...)) -> JS
 	raw = await image.read()
 	png_bytes = _convert_to_png(raw)
 
-	username = _safe_username(_get_session_username(request))
-	target_path = _build_target_path(username)
-	target_path.write_bytes(png_bytes)
+	username, user_dir = _get_user_tg_dir(request)
+	record_stem, record_dir, json_path, image_path = _build_result_paths(user_dir)
+	record_dir.mkdir(parents=True, exist_ok=True)
+	image_path.write_bytes(png_bytes)
+
+	try:
+		result_text = predict_color_spirit(
+			img_path=image_path,
+			color_model_path=_TG_MODEL_DIR / "color_model.pt",
+			spirit_model_path=_TG_MODEL_DIR / "spirit_model.pt",
+		)
+	except Exception as exc:
+		raise HTTPException(status_code=500, detail=f"舌诊结果生成失败：{exc}") from exc
+
+	relative_image_path, relative_json_path = _write_tg_result(
+		record_stem=record_stem,
+		record_dir=record_dir,
+		json_path=json_path,
+		image_path=image_path,
+		image_bytes=png_bytes,
+		username=username,
+		result_text=result_text,
+	)
 
 	return JSONResponse(
 		content={
 			"success": True,
 			"username": username,
-			"filename": target_path.name,
-			"relativePath": f"data/tg/{username}/{target_path.name}",
+			"recordName": record_stem,
+			"filename": image_path.name,
+			"relativePath": relative_image_path,
+			"resultFile": relative_json_path,
+			"resultText": result_text,
 			"size": len(png_bytes),
 		},
 		headers={"Cache-Control": "no-store"},

@@ -15,7 +15,7 @@ export type SiteConfig = {
 
 export const siteConfig: SiteConfig = {
     title: '灵·诊',
-    description: 'Welcome to my website!',
+    description: 'Welcome to 灵·诊!',
     defaultLanguage: 'zh-CN',
     image: {
         adaptive: false, // 开关：是否启用响应式图片（srcset/sizes），以减少不同设备上的传输负载和提升性能
@@ -313,12 +313,12 @@ export type UserProfileDataConfig = {
 };
 
 export const USER_PROFILE_CONFIG: UserProfileDataConfig = {
-    fallbackUsername: "User",
+    fallbackUsername: "Sign in/up",
     userPagePath: "/user",
     authPagePath: "/auth",
     bridgeEndpoint: "/user/api.json",
     file: {
-        username: "User",
+        username: "Sign in/up",
         bio: "你尚未登录，请登录使用",
         avatar: "",
         links: FOOTER_SOCIAL_LINKS.map((item) => ({

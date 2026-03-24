@@ -80,3 +80,37 @@
 
 - 有默认用户密码 admin2/admin2
 - 聊天那一块手下留情一点🙏，我只充了10块钱的api，可以使用本地ollama服务玩一玩
+
+## Docker 部署
+
+项目根目录已提供：
+
+- `docker-compose.yml`
+- `RD/Dockerfile`
+- `FE/Dockerfile`
+
+### 一键启动
+
+在项目根目录执行：
+
+```powershell
+docker compose up -d --build
+```
+
+访问：
+
+- 前端：`http://127.0.0.1:4321`
+- 后端：`http://127.0.0.1:3000`
+
+### 停止与查看日志
+
+```powershell
+docker compose down
+docker compose logs -f
+```
+
+### 说明
+
+- 后端数据目录已挂载：`./RD/data:/app/data`，容器重建后数据仍会保留。
+- 前端通过 `RD_BACKEND_BASE_URL=http://rd:3000` 连接后端（容器内服务名通信）。
+- 生产环境请修改 `docker-compose.yml` 中的 `RD_SESSION_SECRET` 为强随机值。

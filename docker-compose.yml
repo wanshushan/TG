@@ -1,0 +1,56 @@
+services:
+  rd:
+    build:
+      context: ./RD
+      dockerfile: Dockerfile
+    container_name: tg-rd
+    environment:
+      RD_ALLOWED_ORIGINS: http://127.0.0.1:4321,http://localhost:4321
+      RD_SESSION_SECRET: change-this-to-a-strong-secret
+    volumes:
+      - ./RD/data:/app/data
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:3000/api/auth/status', timeout=5).getcode()==200 else 1)",
+        ]
+      interval: 15s
+      timeout: 8s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  fe:
+    build:
+      context: ./FE
+      dockerfile: Dockerfile
+    container_name: tg-fe
+    environment:
+      RD_BACKEND_BASE_URL: http://rd:3000
+      PUBLIC_RD_BACKEND_BASE_URL: http://rd:3000
+      PUBLIC_AUTH_STATE_STORAGE_KEY: LINGZHEN_AUTH_LOGGED_IN
+      PUBLIC_AUTH_USERNAME_STORAGE_KEY: LINGZHEN_AUTH_USERNAME
+      PUBLIC_AUTH_DEFAULT_LOGGED_IN: "false"
+    depends_on:
+      rd:
+        condition: service_healthy
+    ports:
+      - "4321:4321"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4321').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 8s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped

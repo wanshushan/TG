@@ -64,6 +64,64 @@ import { siteConfig } from "../../config";
                 color: var(--accent-dark);
                 white-space: nowrap;
             }
+            .topbar-right {
+                display: grid;
+                grid-template-rows: auto auto;
+                align-items: center;
+                justify-items: end;
+                row-gap: 0.4rem;
+            }
+            :global(.tg-topbar .picker-native) {
+                position: absolute !important;
+                width: 1px !important;
+                height: 1px !important;
+                margin: -1px !important;
+                padding: 0 !important;
+                border: 0 !important;
+                clip: rect(0 0 0 0) !important;
+                clip-path: inset(100%) !important;
+                overflow: hidden !important;
+                white-space: nowrap !important;
+            }
+            :global(.tg-topbar .history-picker) {
+                border: 0 !important;
+                background: white !important;
+            }
+            :global(.tg-topbar .picker-trigger) {
+                border: 0 !important;
+                background: rgba(var(--gray-light), 0.75) !important;
+                color: rgb(var(--gray-dark)) !important;
+            }
+            :global(.tg-topbar .picker-trigger:focus),
+            :global(.tg-topbar .picker-trigger:focus-visible),
+            :global(.tg-topbar .picker-option:focus),
+            :global(.tg-topbar .picker-option:focus-visible) {
+                outline: none !important;
+                box-shadow: none !important;
+            }
+            :global(.tg-topbar .picker-trigger:hover) {
+                background: rgba(var(--gray-light), 1) !important;
+            }
+            :global(.tg-topbar .picker-panel) {
+                display: none !important;
+                background: white !important;
+            }
+            :global(.tg-topbar .picker-panel.is-open) {
+                display: block !important;
+            }
+            :global(.tg-topbar .picker-options) {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 0.1rem !important;
+            }
+            :global(.tg-topbar .picker-option:hover) {
+                background: rgba(var(--accent-rgb), 0.14) !important;
+                color: var(--accent-dark) !important;
+            }
+            :global(.tg-topbar .picker-option.is-selected) {
+                background: rgba(var(--accent-rgb), 0.12) !important;
+                color: var(--accent-dark) !important;
+            }
             .tg-content {
                 min-height: 0;
                 overflow-y: auto;
@@ -78,6 +136,33 @@ import { siteConfig } from "../../config";
                 padding: 0.9rem;
                 display: grid;
                 gap: 0.75rem;
+            }
+            .result-card {
+                width: min(100%, 760px);
+                margin: 0.85rem auto 0;
+                background: white;
+                border-radius: var(--tg-radius);
+                padding: 0.9rem;
+                display: grid;
+                gap: 0.6rem;
+            }
+            .result-title {
+                margin: 0;
+                font-size: 0.95rem;
+                color: rgba(var(--gray-dark), 0.85);
+                font-weight: 700;
+            }
+            .result-output {
+                margin: 0;
+                min-height: 8.5rem;
+                border-radius: var(--tg-radius-sm);
+                background: rgba(var(--gray-light), 0.7);
+                padding: 0.75rem;
+                color: rgb(var(--gray-dark));
+                font-size: 0.9rem;
+                line-height: 1.6;
+                word-break: break-word;
+                white-space: pre-wrap;
             }
             .preview-box {
                 width: 100%;
@@ -143,6 +228,24 @@ import { siteConfig } from "../../config";
                     flex-direction: column;
                     gap: 0.55rem;
                 }
+                .topbar-right {
+                    width: 100%;
+                    justify-items: start;
+                }
+                .history-picker {
+                    width: 100%;
+                    box-sizing: border-box;
+                }
+                .picker-trigger {
+                    flex: 1;
+                    max-width: 100%;
+                }
+                .picker-panel {
+                    left: 0;
+                    right: 0;
+                    width: auto;
+                    max-width: 100%;
+                }
                 .status {
                     white-space: normal;
                 }
@@ -165,7 +268,54 @@ import { siteConfig } from "../../config";
                         <h1>灵诊·舌诊</h1>
                         <p class="subtitle">请选择一张舌像图片上传分析</p>
                     </div>
-                    <div id="status" class="status">请选择图片后上传</div>
+                    <div class="topbar-right">
+                        <div id="status" class="status">请选择图片后上传</div>
+                        <label
+                            class="history-picker picker-more"
+                            for="tg-history-select"
+                            id="tg-history-picker-root"
+                        >
+                            <span>舌诊记录</span>
+                            <select
+                                id="tg-history-select"
+                                class="picker-native"
+                                aria-label="选择舌诊历史记录"></select>
+                            <button
+                                id="tg-history-picker-trigger"
+                                class="picker-trigger"
+                                type="button"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                aria-controls="tg-history-picker-panel"
+                            >
+                                <span
+                                    id="tg-history-picker-label"
+                                    class="picker-trigger-label">选择记录</span
+                                >
+                                <svg
+                                    class="picker-trigger-icon"
+                                    viewBox="0 0 24 24"
+                                    width="14"
+                                    height="14"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M7 10l5 5 5-5z"></path>
+                                </svg>
+                            </button>
+                            <div
+                                id="tg-history-picker-panel"
+                                class="picker-panel"
+                                role="listbox"
+                                aria-label="舌诊历史记录选项"
+                            >
+                                <div
+                                    id="tg-history-picker-options"
+                                    class="picker-options"
+                                >
+                                </div>
+                            </div>
+                        </label>
+                    </div>
                 </div>
 
                 <section class="tg-content" aria-live="polite">
@@ -179,6 +329,14 @@ import { siteConfig } from "../../config";
                         <p class="meta" id="meta">
                             支持 JPG / JPEG / PNG / WEBP / BMP / GIF
                         </p>
+                    </article>
+                    <article class="result-card">
+                        <h2 class="result-title">
+                            舌诊数据（在问诊页面可以选择使用）
+                        </h2>
+                        <div class="result-output" id="result-output">
+                            等待分析结果...
+                        </div>
                     </article>
                 </section>
 
@@ -219,8 +377,33 @@ import { siteConfig } from "../../config";
             const metaEl = document.querySelector(
                 "#meta",
             ) as HTMLParagraphElement | null;
+            const resultOutputEl = document.querySelector(
+                "#result-output",
+            ) as HTMLDivElement | null;
+            const historySelectEl = document.querySelector(
+                "#tg-history-select",
+            ) as HTMLSelectElement | null;
+            const historyPickerRootEl = document.querySelector(
+                "#tg-history-picker-root",
+            ) as HTMLLabelElement | null;
+            const historyPickerTriggerEl = document.querySelector(
+                "#tg-history-picker-trigger",
+            ) as HTMLButtonElement | null;
+            const historyPickerLabelEl = document.querySelector(
+                "#tg-history-picker-label",
+            ) as HTMLSpanElement | null;
+            const historyPickerPanelEl = document.querySelector(
+                "#tg-history-picker-panel",
+            ) as HTMLDivElement | null;
+            const historyPickerOptionsEl = document.querySelector(
+                "#tg-history-picker-options",
+            ) as HTMLDivElement | null;
 
             const uploadUrl = "/api/tg/upload";
+            const tgHistoryUrl = "/api/tg/history";
+            let tgRecordNames: string[] = [];
+            let selectedTgRecordName = "";
+            let syncHistoryPickerMenu = () => {};
 
             function setStatus(text: string) {
                 if (statusEl) {
@@ -233,6 +416,13 @@ import { siteConfig } from "../../config";
                     return error.message;
                 }
                 return String(error);
+            }
+
+            function setResult(text: string) {
+                if (!resultOutputEl) {
+                    return;
+                }
+                resultOutputEl.textContent = text.trim() || "等待分析结果...";
             }
 
             function renderPreview(file: File | null) {
@@ -260,15 +450,307 @@ import { siteConfig } from "../../config";
                 };
             }
 
-            if (formEl && imageInputEl && uploadBtnEl) {
+            function renderPreviewByRecord(recordName: string) {
+                if (!previewImageEl || !previewEmptyEl || !metaEl) {
+                    return;
+                }
+                previewImageEl.src = `${tgHistoryUrl}?action=image&name=${encodeURIComponent(recordName)}&t=${Date.now()}`;
+                previewImageEl.hidden = false;
+                previewEmptyEl.hidden = true;
+                metaEl.textContent = `已加载历史记录：${recordName}`;
+            }
+
+            function sortRecordNames(names: string[]): string[] {
+                return [...names].sort((a, b) =>
+                    a === b ? 0 : a > b ? -1 : 1,
+                );
+            }
+
+            function setupPickerMenu(args: {
+                rootEl: HTMLElement | null;
+                selectEl: HTMLSelectElement | null;
+                triggerEl: HTMLButtonElement | null;
+                labelEl: HTMLSpanElement | null;
+                panelEl: HTMLDivElement | null;
+                optionsEl: HTMLDivElement | null;
+                emptyLabel: string;
+            }): () => void {
+                const {
+                    rootEl,
+                    selectEl,
+                    triggerEl,
+                    labelEl,
+                    panelEl,
+                    optionsEl,
+                    emptyLabel,
+                } = args;
+
+                if (
+                    !rootEl ||
+                    !selectEl ||
+                    !triggerEl ||
+                    !labelEl ||
+                    !panelEl ||
+                    !optionsEl
+                ) {
+                    return () => {};
+                }
+
+                const closePanel = () => {
+                    panelEl.classList.remove("is-open");
+                    triggerEl.setAttribute("aria-expanded", "false");
+                    panelEl.style.transform = "translateX(0)";
+                };
+
+                const adjustPanelPosition = () => {
+                    panelEl.style.transform = "translateX(0)";
+                    const viewportGap = 8;
+                    const rect = panelEl.getBoundingClientRect();
+                    let offsetX = 0;
+
+                    if (rect.right > window.innerWidth - viewportGap) {
+                        offsetX = window.innerWidth - viewportGap - rect.right;
+                    }
+                    if (rect.left + offsetX < viewportGap) {
+                        offsetX += viewportGap - (rect.left + offsetX);
+                    }
+
+                    if (offsetX !== 0) {
+                        panelEl.style.transform = `translateX(${offsetX}px)`;
+                    }
+                };
+
+                const renderOptions = () => {
+                    const selectOptions = Array.from(selectEl.options);
+                    const selectedOption =
+                        selectOptions.find(
+                            (option) => option.value === selectEl.value,
+                        ) || selectOptions[0];
+
+                    labelEl.textContent =
+                        selectedOption?.textContent?.trim() || emptyLabel;
+                    optionsEl.innerHTML = "";
+
+                    for (const option of selectOptions) {
+                        const optionButton = document.createElement("button");
+                        optionButton.type = "button";
+                        optionButton.className = "picker-option";
+                        optionButton.textContent = option.textContent || "";
+                        optionButton.setAttribute("role", "option");
+                        const isSelected = option.value === selectEl.value;
+                        optionButton.setAttribute(
+                            "aria-selected",
+                            isSelected ? "true" : "false",
+                        );
+
+                        if (isSelected) {
+                            optionButton.classList.add("is-selected");
+                        }
+
+                        optionButton.addEventListener("click", () => {
+                            if (selectEl.value !== option.value) {
+                                selectEl.value = option.value;
+                                selectEl.dispatchEvent(new Event("change"));
+                            }
+                            closePanel();
+                        });
+
+                        optionsEl.appendChild(optionButton);
+                    }
+                };
+
+                if (rootEl.dataset.pickerInitialized !== "true") {
+                    triggerEl.addEventListener("click", (event) => {
+                        event.stopPropagation();
+                        const nextOpen = !panelEl.classList.contains("is-open");
+                        panelEl.classList.toggle("is-open", nextOpen);
+                        triggerEl.setAttribute(
+                            "aria-expanded",
+                            nextOpen ? "true" : "false",
+                        );
+
+                        if (nextOpen) {
+                            requestAnimationFrame(adjustPanelPosition);
+                        }
+                    });
+
+                    document.addEventListener("click", (event) => {
+                        const target = event.target;
+                        if (!(target instanceof Node)) {
+                            return;
+                        }
+                        if (!rootEl.contains(target)) {
+                            closePanel();
+                        }
+                    });
+
+                    document.addEventListener("keydown", (event) => {
+                        if (event.key === "Escape") {
+                            closePanel();
+                        }
+                    });
+
+                    window.addEventListener("resize", () => {
+                        if (panelEl.classList.contains("is-open")) {
+                            adjustPanelPosition();
+                        }
+                    });
+
+                    selectEl.addEventListener("change", renderOptions);
+                    rootEl.dataset.pickerInitialized = "true";
+                }
+
+                renderOptions();
+                return renderOptions;
+            }
+
+            function renderHistoryOptions() {
+                if (!historySelectEl) {
+                    return;
+                }
+
+                historySelectEl.innerHTML = "";
+                const emptyOption = document.createElement("option");
+                emptyOption.value = "";
+                emptyOption.textContent = "选择记录";
+                historySelectEl.appendChild(emptyOption);
+
+                for (const recordName of tgRecordNames) {
+                    const optionEl = document.createElement("option");
+                    optionEl.value = recordName;
+                    optionEl.textContent = recordName;
+                    historySelectEl.appendChild(optionEl);
+                }
+
+                historySelectEl.value =
+                    selectedTgRecordName &&
+                    tgRecordNames.includes(selectedTgRecordName)
+                        ? selectedTgRecordName
+                        : "";
+                syncHistoryPickerMenu();
+            }
+
+            async function fetchTgHistoryList() {
+                const response = await fetch(`${tgHistoryUrl}?action=list`, {
+                    cache: "no-store",
+                    credentials: "include",
+                });
+                if (!response.ok) {
+                    throw new Error(
+                        `读取历史列表失败：HTTP ${response.status}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    records?: unknown;
+                };
+                const records = Array.isArray(payload.records)
+                    ? payload.records
+                          .filter(
+                              (value): value is string =>
+                                  typeof value === "string",
+                          )
+                          .map((value) => value.trim())
+                          .filter((value) => value.length > 0)
+                    : [];
+                tgRecordNames = sortRecordNames(records);
+                renderHistoryOptions();
+            }
+
+            async function loadTgHistoryByName(recordName: string) {
+                const response = await fetch(
+                    `${tgHistoryUrl}?action=load&name=${encodeURIComponent(recordName)}`,
+                    {
+                        cache: "no-store",
+                        credentials: "include",
+                    },
+                );
+                if (!response.ok) {
+                    const detail = (await response.text()).trim();
+                    throw new Error(
+                        `读取历史记录失败：HTTP ${response.status}${detail ? ` - ${detail}` : ""}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    recordName?: unknown;
+                    tgData?: unknown;
+                };
+                const loadedName =
+                    typeof payload.recordName === "string"
+                        ? payload.recordName.trim()
+                        : recordName;
+
+                const tgData = payload.tgData;
+                const rawText =
+                    tgData &&
+                    typeof tgData === "object" &&
+                    typeof (tgData as { rawText?: unknown }).rawText ===
+                        "string"
+                        ? (tgData as { rawText: string }).rawText.trim()
+                        : "";
+
+                selectedTgRecordName = loadedName;
+                renderHistoryOptions();
+                renderPreviewByRecord(loadedName);
+                setResult(rawText || "该记录暂无舌诊数据。");
+                setStatus(`已加载历史记录：${loadedName}`);
+            }
+
+            if (formEl && imageInputEl && uploadBtnEl && historySelectEl) {
+                syncHistoryPickerMenu = setupPickerMenu({
+                    rootEl: historyPickerRootEl,
+                    selectEl: historySelectEl,
+                    triggerEl: historyPickerTriggerEl,
+                    labelEl: historyPickerLabelEl,
+                    panelEl: historyPickerPanelEl,
+                    optionsEl: historyPickerOptionsEl,
+                    emptyLabel: "选择记录",
+                });
+
                 imageInputEl.addEventListener("change", () => {
                     const file = imageInputEl.files?.[0] || null;
                     renderPreview(file);
                     if (file) {
                         setStatus("图片已选择，点击上传。");
+                        setResult("等待分析结果...");
                     } else {
                         setStatus("请选择图片后上传");
+                        setResult("等待分析结果...");
                     }
+                });
+
+                historySelectEl.addEventListener("change", async () => {
+                    const recordName = historySelectEl.value.trim();
+                    if (!recordName) {
+                        selectedTgRecordName = "";
+                        setStatus("请选择图片后上传");
+                        setResult("等待分析结果...");
+                        return;
+                    }
+
+                    uploadBtnEl.disabled = true;
+                    try {
+                        await loadTgHistoryByName(recordName);
+                    } catch (error) {
+                        setStatus(
+                            `加载历史记录失败：${getErrorMessage(error)}`,
+                        );
+                    } finally {
+                        uploadBtnEl.disabled = false;
+                    }
+                });
+
+                historyPickerTriggerEl?.addEventListener("click", () => {
+                    void (async () => {
+                        try {
+                            await fetchTgHistoryList();
+                        } catch (error) {
+                            setStatus(
+                                `读取历史列表失败：${getErrorMessage(error)}`,
+                            );
+                        }
+                    })();
                 });
 
                 formEl.addEventListener("submit", async (event) => {
@@ -285,6 +767,7 @@ import { siteConfig } from "../../config";
 
                     uploadBtnEl.disabled = true;
                     setStatus("上传处理中...");
+                    setResult("正在分析，请稍候...");
 
                     try {
                         const response = await fetch(uploadUrl, {
@@ -310,13 +793,46 @@ import { siteConfig } from "../../config";
                             typeof payload?.username === "string"
                                 ? payload.username
                                 : "guest";
+                        const resultText =
+                            typeof payload?.resultText === "string"
+                                ? payload.resultText
+                                : "";
+                        const recordName =
+                            typeof payload?.recordName === "string"
+                                ? payload.recordName
+                                : "";
+
+                        setResult(resultText || "该记录暂无舌诊数据。");
+                        await fetchTgHistoryList();
+                        if (recordName) {
+                            selectedTgRecordName = recordName;
+                            renderHistoryOptions();
+                        }
+
                         setStatus(`上传成功：${filename}（用户：${username}）`);
                     } catch (error) {
                         setStatus(`上传失败：${getErrorMessage(error)}`);
+                        if (
+                            resultOutputEl &&
+                            !resultOutputEl.textContent?.trim()
+                        ) {
+                            setResult("分析失败，暂无结果。");
+                        }
                     } finally {
                         uploadBtnEl.disabled = false;
                     }
                 });
+
+                renderHistoryOptions();
+                void (async () => {
+                    try {
+                        await fetchTgHistoryList();
+                    } catch (error) {
+                        setStatus(
+                            `读取历史列表失败：${getErrorMessage(error)}`,
+                        );
+                    }
+                })();
             } else {
                 console.error("舌诊页初始化失败：缺少必要 DOM 节点。");
             }
