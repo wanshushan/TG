@@ -184,6 +184,158 @@ export function TypingTitle({
     );
 }
 
+function splitTextByMode(text, splitBy) {
+    const value = String(text ?? "");
+
+    if (splitBy === "words") {
+        const words = value.match(/\S+\s*/g);
+        return words && words.length > 0 ? words : [value];
+    }
+
+    if (splitBy === "lines") {
+        const lines = value.split(/\r?\n/);
+        return lines.length > 0 ? lines : [value];
+    }
+
+    return Array.from(value);
+}
+
+function getStaggerDelay(index, length, staggerDuration, staggerFrom) {
+    const safeIndex = Math.max(index, 0);
+    const safeLength = Math.max(length, 1);
+    const base = Math.max(staggerDuration, 0);
+
+    if (staggerFrom === "last") {
+        return (safeLength - safeIndex - 1) * base;
+    }
+
+    if (staggerFrom === "center") {
+        const center = (safeLength - 1) / 2;
+        return Math.abs(safeIndex - center) * base;
+    }
+
+    return safeIndex * base;
+}
+
+export function RotatingText({
+    texts = [],
+    rotationInterval = 2000,
+    loop = true,
+    auto = true,
+    splitBy = "characters",
+    onNext,
+    mainClassName = "",
+    splitLevelClassName = "",
+    elementLevelClassName = "",
+    staggerDuration = 0.03,
+    staggerFrom = "first",
+    transition = { duration: 0.42, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+}) {
+    const safeTexts = Array.isArray(texts) ? texts.filter((item) => item !== null && item !== undefined) : [];
+    const [activeIndex, setActiveIndex] = useState(0);
+
+    useEffect(() => {
+        if (!auto || safeTexts.length <= 1) {
+            return;
+        }
+
+        const intervalMs = Math.max(rotationInterval, 500);
+        const timer = window.setInterval(() => {
+            setActiveIndex((previous) => {
+                const next = previous + 1;
+                if (next >= safeTexts.length) {
+                    if (!loop) {
+                        return previous;
+                    }
+                    onNext?.(0);
+                    return 0;
+                }
+                onNext?.(next);
+                return next;
+            });
+        }, intervalMs);
+
+        return () => window.clearInterval(timer);
+    }, [auto, loop, onNext, rotationInterval, safeTexts.length]);
+
+    useEffect(() => {
+        if (activeIndex <= safeTexts.length - 1) {
+            return;
+        }
+        setActiveIndex(0);
+    }, [activeIndex, safeTexts.length]);
+
+    if (safeTexts.length === 0) {
+        return null;
+    }
+
+    const currentText = String(safeTexts[activeIndex] ?? "");
+    const units = splitTextByMode(currentText, splitBy);
+    const animationDuration = Math.max(Number(transition?.duration) || 0.42, 0.1);
+    const animationEasing = String(transition?.easing || "cubic-bezier(0.22, 1, 0.36, 1)");
+
+    return (
+        <span
+            className={mainClassName}
+            style={{
+                display: "inline-flex",
+                alignItems: "baseline",
+                overflow: "hidden",
+                verticalAlign: "baseline",
+                minHeight: "1em",
+            }}
+            aria-live="polite"
+        >
+            <span
+                key={`${activeIndex}-${currentText}`}
+                className={splitLevelClassName}
+                style={{
+                    display: "inline-flex",
+                    alignItems: "baseline",
+                    whiteSpace: splitBy === "lines" ? "pre-line" : "pre-wrap",
+                }}
+            >
+                {units.map((part, index) => {
+                    const delay = getStaggerDelay(index, units.length, staggerDuration, staggerFrom);
+                    const displayText = splitBy === "characters" && part === " " ? "\u00A0" : part;
+
+                    return (
+                        <span
+                            key={`${part}-${index}`}
+                            className={elementLevelClassName}
+                            style={{
+                                display: "inline-block",
+                                opacity: 0,
+                                transform: "translateY(110%)",
+                                animationName: "rbRotateItemIn",
+                                animationDuration: `${animationDuration}s`,
+                                animationTimingFunction: animationEasing,
+                                animationFillMode: "forwards",
+                                animationDelay: `${delay}s`,
+                            }}
+                        >
+                            {displayText}
+                        </span>
+                    );
+                })}
+            </span>
+
+            <style>{`
+                @keyframes rbRotateItemIn {
+                    0% {
+                        opacity: 0;
+                        transform: translateY(110%);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            `}</style>
+        </span>
+    );
+}
+
 export function ShuffleStackGallery({
     items = [],
     intervalMs = 3200,

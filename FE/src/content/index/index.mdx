@@ -1,4 +1,8 @@
-import { ShuffleStackGallery, TypingTitle } from "./ele.jsx";
+import { RotatingText, ShuffleStackGallery, TypingTitle } from "./ele.jsx";
+import ScrollStack, { ScrollStackItem } from './ScrollStack'
+
+
+
 
 <TypingTitle
   client:load
@@ -6,8 +10,18 @@ import { ShuffleStackGallery, TypingTitle } from "./ele.jsx";
   fontSize="clamp(2rem, 12vw, 7.5rem)"
   duration={2.8}
 />
+<br />
+<h3 style={{ marginTop: "0.6rem" }}>
+  <RotatingText
+    client:load
+    texts={["记录你的身体", "分析你的健康", "看见你的变化"]}
+    rotationInterval={2200}
+    splitBy="characters"
+    staggerDuration={0.02}
+    staggerFrom="first"
+  />
+</h3>
 
-**记录你的身体，分析你的健康**  
 <br />
 <style>
   {`

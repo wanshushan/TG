@@ -12,6 +12,7 @@ type ChartVM = {
     title: string;
     xAxisName: string;
     yAxisName: string;
+    hasSeries: boolean;
     minX: number;
     maxX: number;
     minY: number;
@@ -67,10 +68,7 @@ function normalizeSeriesPoints(
     }
 
     if (normalized.length === 0) {
-        return [
-            { x: 0, y: 0 },
-            { x: 1, y: 0 },
-        ];
+        return [];
     }
 
     normalized.sort((a, b) => a.x - b.x);
@@ -99,11 +97,25 @@ function formatNumber(value: number): string {
 
 function toChartVM(chart: ResolvedUserChart): ChartVM {
     const points = normalizeSeriesPoints(chart.points);
+    const hasSeries = points.length > 0;
 
-    const minX = Math.min(...points.map((point) => point.x));
-    const maxX = Math.max(...points.map((point) => point.x));
-    const minY = Math.min(...points.map((point) => point.y));
-    const maxY = Math.max(...points.map((point) => point.y));
+    // Reindex x coordinates starting from 0 for uniform distribution
+    const reindexedPoints = points.map((point, index) => ({
+        x: index,
+        y: point.y,
+    }));
+
+    const renderPoints = hasSeries
+        ? reindexedPoints
+        : [
+              { x: 0, y: 0 },
+              { x: 1, y: 0 },
+          ];
+
+    const minX = 0;
+    const maxX = Math.max(...renderPoints.map((point) => point.x), 1);
+    const minY = 0;
+    const maxY = Math.max(...renderPoints.map((point) => point.y));
 
     const xSpan = maxX - minX || 1;
     const ySpan = maxY - minY || 1;
@@ -111,7 +123,7 @@ function toChartVM(chart: ResolvedUserChart): ChartVM {
     const innerWidth = SVG_WIDTH - PADDING_LEFT - PADDING_RIGHT;
     const innerHeight = SVG_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
 
-    const mapped = points.map((point) => ({
+    const mapped = renderPoints.map((point) => ({
         x: PADDING_LEFT + ((point.x - minX) / xSpan) * innerWidth,
         y: PADDING_TOP + (1 - (point.y - minY) / ySpan) * innerHeight,
     }));
@@ -121,6 +133,7 @@ function toChartVM(chart: ResolvedUserChart): ChartVM {
         title: chart.title,
         xAxisName: chart.xAxisName,
         yAxisName: chart.yAxisName,
+        hasSeries,
         minX,
         maxX,
         minY,
@@ -128,7 +141,7 @@ function toChartVM(chart: ResolvedUserChart): ChartVM {
         polylinePoints: mapped
             .map((point) => `${point.x},${point.y}`)
             .join(" "),
-        pointCoordinates: mapped,
+        pointCoordinates: hasSeries ? mapped : [],
     };
 }
 
@@ -166,11 +179,13 @@ const chartViewModels = charts.slice(0, 4).map((chart) => toChartVM(chart));
                                     class="axis-line"
                                 />
 
-                                <polyline
-                                    points={chart.polylinePoints}
-                                    class="trend-line"
-                                    fill="none"
-                                />
+                                {chart.hasSeries && (
+                                    <polyline
+                                        points={chart.polylinePoints}
+                                        class="trend-line"
+                                        fill="none"
+                                    />
+                                )}
 
                                 {chart.pointCoordinates.map((point) => (
                                     <circle
@@ -186,7 +201,7 @@ const chartViewModels = charts.slice(0, 4).map((chart) => toChartVM(chart));
                                     y={SVG_HEIGHT - 8}
                                     class="tick-label"
                                 >
-                                    {formatNumber(chart.minX)}
+                                    0
                                 </text>
                                 <text
                                     x={SVG_WIDTH - PADDING_RIGHT}

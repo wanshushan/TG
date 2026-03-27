@@ -1,0 +1,21 @@
+{
+  "metric": "qixue",
+  "records": [
+    {
+      "time": "2026-03-26T23:29:01.939064",
+      "recordName": "face-26-03-26T23-28",
+      "score": 72
+    },
+    {
+      "time": "2026-03-26T23:30:55.980170",
+      "recordName": "face-26-03-26T23-30",
+      "score": 64
+    },
+    {
+      "time": "2026-03-26T23:43:24.822707",
+      "recordName": "face-26-03-26T23-43",
+      "score": 80,
+      "scoreSource": "fallback"
+    }
+  ]
+}

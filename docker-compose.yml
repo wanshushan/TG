@@ -29,6 +29,8 @@ services:
     build:
       context: ./FE
       dockerfile: Dockerfile
+      args:
+        PNPM_REGISTRY: ${PNPM_REGISTRY:-https://registry.npmmirror.com}
     container_name: tg-fe
     environment:
       RD_BACKEND_BASE_URL: http://rd:3000

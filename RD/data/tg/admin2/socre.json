@@ -1,0 +1,22 @@
+{
+  "metric": "tizhi",
+  "records": [
+    {
+      "time": "2026-03-26T23:27:50.659626",
+      "recordName": "tg-26-03-26T23-27",
+      "score": 100
+    },
+    {
+      "time": "2026-03-26T23:45:08.011716",
+      "recordName": "tg-26-03-26T23-45",
+      "score": 100,
+      "scoreSource": "fallback"
+    },
+    {
+      "time": "2026-03-26T23:54:20.934942",
+      "recordName": "tg-26-03-26T23-54",
+      "score": 90,
+      "scoreSource": "fallback"
+    }
+  ]
+}

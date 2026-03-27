@@ -4,6 +4,7 @@ import base64
 import json
 import os
 import re
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from io import BytesIO
@@ -17,6 +18,8 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from PIL import Image, UnidentifiedImageError
+
+from .face_socre import append_face_socre, score_face_qixue
 
 router = APIRouter()
 
@@ -516,10 +519,16 @@ def _write_face_result(
 	selected_option_name: str,
 	prompt_text: str,
 	output_text: str,
+	qixue_score: int | None = None,
+	qixue_score_source: str = "fallback",
 ) -> None:
 	record_dir.mkdir(parents=True, exist_ok=True)
 	image_path.write_bytes(image_bytes)
 	relative_image_path = f"data/face/{username}/{record_stem}/{image_path.name}"
+	face_data = _parse_face_data(output_text)
+	if isinstance(face_data, dict) and qixue_score is not None:
+		face_data["qixueScore"] = qixue_score
+		face_data["qixueScoreSource"] = qixue_score_source
 	payload = {
 		"recordName": record_stem,
 		"owner": username,
@@ -528,7 +537,10 @@ def _write_face_result(
 		"selectedOptionName": selected_option_name,
 		"prompt": prompt_text,
 		"imagePath": relative_image_path,
-		"faceData": _parse_face_data(output_text),
+		"faceData": face_data,
+		"qixueScore": qixue_score,
+		"qixueScoreSource": qixue_score_source,
+		"outputText": output_text,
 	}
 	temp_path = json_path.with_suffix(".tmp")
 	temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -626,6 +638,9 @@ async def stream_face_doc(
 
 	def plain_text_stream():
 		pieces: list[str] = []
+		qixue_score_value: int | None = None
+		qixue_score_source = "fallback"
+		has_first_output = False
 		try:
 			buffer = ""
 			while True:
@@ -636,12 +651,24 @@ async def stream_face_doc(
 				output, buffer = _consume_stream_buffer(buffer, final=False)
 				if output:
 					pieces.append(output)
+					has_first_output = True
 					yield output
 
 			tail, _ = _consume_stream_buffer(buffer, final=True)
 			if tail:
 				pieces.append(tail)
+				has_first_output = True
 				yield tail
+
+			final_text = "".join(pieces)
+			if has_first_output:
+				time.sleep(5)
+
+			qixue_score_value, qixue_score_line, is_llm_score = score_face_qixue(final_text)
+			qixue_score_source = "llm" if is_llm_score else "fallback"
+			score_suffix = f"\n\n{qixue_score_line}\n"
+			pieces.append(score_suffix)
+			yield score_suffix
 		finally:
 			try:
 				stream_response.close()
@@ -661,6 +688,15 @@ async def stream_face_doc(
 					selected_option_name=resolved.name,
 					prompt_text=prompt_text,
 					output_text=final_text,
+					qixue_score=qixue_score_value,
+					qixue_score_source=qixue_score_source,
+				)
+			if qixue_score_value is not None:
+				append_face_socre(
+					username=username,
+					record_name=record_stem,
+					score=qixue_score_value,
+					score_source=qixue_score_source,
 				)
 
 	return StreamingResponse(

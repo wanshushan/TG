@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -10,6 +11,9 @@ from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 
 from .ay_color_sprit import predict_color_spirit
+from .hu import predict_hu_tongue
+from .tg_socre import append_tg_socre, score_tg_tizhi
+from .yzp import predict_tongue_quality
 
 try:
 	from PIL import Image, UnidentifiedImageError
@@ -77,6 +81,30 @@ def _extract_result_fields(result_text: str) -> tuple[str, str]:
 	return color, spirit
 
 
+def _extract_tongue_quality(result_text: str) -> str:
+	for line in result_text.splitlines():
+		stripped = line.strip()
+		if stripped.startswith("[苔质类型]："):
+			return stripped.replace("[苔质类型]：", "", 1).strip()
+	return ""
+
+
+def _extract_hu_tongue_color(result_text: str) -> str:
+	for line in result_text.splitlines():
+		stripped = line.strip()
+		if stripped.startswith("【舌色结果】："):
+			return stripped.replace("【舌色结果】：", "", 1).strip()
+	return ""
+
+
+def _extract_hu_tongue_coat(result_text: str) -> str:
+	for line in result_text.splitlines():
+		stripped = line.strip()
+		if stripped.startswith("【舌苔状态】："):
+			return stripped.replace("【舌苔状态】：", "", 1).strip()
+	return ""
+
+
 def _write_tg_result(
 	record_stem: str,
 	record_dir: Path,
@@ -84,13 +112,29 @@ def _write_tg_result(
 	image_path: Path,
 	image_bytes: bytes,
 	username: str,
-	result_text: str,
+	color_spirit_text: str,
+	tongue_quality_text: str,
+	hu_tongue_color_text: str,
+	hu_tongue_coat_text: str,
+	tizhi_score: int | None = None,
+	tizhi_score_text: str = "",
+	tizhi_score_source: str = "fallback",
 ) -> tuple[str, str]:
 	record_dir.mkdir(parents=True, exist_ok=True)
 	image_path.write_bytes(image_bytes)
 	relative_image_path = f"data/tg/{username}/{record_stem}/{image_path.name}"
 	relative_json_path = f"data/tg/{username}/{record_stem}/{json_path.name}"
-	color, spirit = _extract_result_fields(result_text)
+	color, spirit = _extract_result_fields(color_spirit_text)
+	tongue_quality = _extract_tongue_quality(tongue_quality_text)
+	hu_tongue_color = _extract_hu_tongue_color(hu_tongue_color_text)
+	hu_tongue_coat = _extract_hu_tongue_coat(hu_tongue_coat_text)
+	combined_raw_text = "\n".join([
+		color_spirit_text.strip(),
+		tongue_quality_text.strip(),
+		hu_tongue_color_text.strip(),
+		hu_tongue_coat_text.strip(),
+		tizhi_score_text.strip(),
+	]).strip()
 	payload = {
 		"recordName": record_stem,
 		"owner": username,
@@ -99,7 +143,17 @@ def _write_tg_result(
 		"tgData": {
 			"color": color,
 			"spirit": spirit,
-			"rawText": result_text,
+			"tongueQuality": tongue_quality,
+			"tongueColor": hu_tongue_color,
+			"tongueCoatStatus": hu_tongue_coat,
+			"tizhiScore": tizhi_score,
+			"tizhiScoreSource": tizhi_score_source,
+			"rawText": combined_raw_text,
+			"colorSpiritText": color_spirit_text,
+			"tongueQualityText": tongue_quality_text,
+			"tongueColorText": hu_tongue_color_text,
+			"tongueCoatText": hu_tongue_coat_text,
+			"tizhiScoreText": tizhi_score_text,
 		},
 	}
 	temp_path = json_path.with_suffix(".tmp")
@@ -208,13 +262,31 @@ async def upload_tg_image(request: Request, image: UploadFile = File(...)) -> JS
 	image_path.write_bytes(png_bytes)
 
 	try:
-		result_text = predict_color_spirit(
+		color_spirit_text = predict_color_spirit(
 			img_path=image_path,
 			color_model_path=_TG_MODEL_DIR / "color_model.pt",
 			spirit_model_path=_TG_MODEL_DIR / "spirit_model.pt",
 		)
+		tongue_quality_text = predict_tongue_quality(
+			img_path=image_path,
+			model_path=Path(__file__).resolve().parent / "yzp" / "tongue_classifier.pth",
+		)
+		hu_tongue_color_text, hu_tongue_coat_text = predict_hu_tongue(
+			img_path=image_path,
+		)
 	except Exception as exc:
 		raise HTTPException(status_code=500, detail=f"舌诊结果生成失败：{exc}") from exc
+
+	score_source_text = "\n".join([
+		color_spirit_text.strip(),
+		tongue_quality_text.strip(),
+		hu_tongue_color_text.strip(),
+		hu_tongue_coat_text.strip(),
+	]).strip()
+
+	time.sleep(5)
+	tizhi_score, tizhi_score_line, is_llm_score = score_tg_tizhi(score_source_text)
+	tizhi_score_source = "llm" if is_llm_score else "fallback"
 
 	relative_image_path, relative_json_path = _write_tg_result(
 		record_stem=record_stem,
@@ -223,8 +295,30 @@ async def upload_tg_image(request: Request, image: UploadFile = File(...)) -> JS
 		image_path=image_path,
 		image_bytes=png_bytes,
 		username=username,
-		result_text=result_text,
+		color_spirit_text=color_spirit_text,
+		tongue_quality_text=tongue_quality_text,
+		hu_tongue_color_text=hu_tongue_color_text,
+		hu_tongue_coat_text=hu_tongue_coat_text,
+		tizhi_score=tizhi_score,
+		tizhi_score_text=tizhi_score_line,
+		tizhi_score_source=tizhi_score_source,
 	)
+
+	if tizhi_score is not None:
+		append_tg_socre(
+			username=username,
+			record_name=record_stem,
+			score=tizhi_score,
+			score_source=tizhi_score_source,
+		)
+
+	result_text = "\n".join([
+		color_spirit_text.strip(),
+		tongue_quality_text.strip(),
+		hu_tongue_color_text.strip(),
+		hu_tongue_coat_text.strip(),
+		tizhi_score_line.strip(),
+	]).strip()
 
 	return JSONResponse(
 		content={
@@ -235,6 +329,13 @@ async def upload_tg_image(request: Request, image: UploadFile = File(...)) -> JS
 			"relativePath": relative_image_path,
 			"resultFile": relative_json_path,
 			"resultText": result_text,
+			"colorSpiritText": color_spirit_text,
+			"tongueQualityText": tongue_quality_text,
+			"tongueColorText": hu_tongue_color_text,
+			"tongueCoatText": hu_tongue_coat_text,
+			"tizhiScore": tizhi_score,
+			"tizhiScoreSource": tizhi_score_source,
+			"tizhiScoreText": tizhi_score_line,
 			"size": len(png_bytes),
 		},
 		headers={"Cache-Control": "no-store"},

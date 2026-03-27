@@ -34,7 +34,8 @@ services:
       PUBLIC_AUTH_STATE_STORAGE_KEY: LINGZHEN_AUTH_LOGGED_IN
       PUBLIC_AUTH_USERNAME_STORAGE_KEY: LINGZHEN_AUTH_USERNAME
       PUBLIC_AUTH_DEFAULT_LOGGED_IN: "false"
-    command: sh -c "corepack enable && pnpm install && pnpm dev --host 0.0.0.0 --port 4321"
+      PNPM_REGISTRY: ${PNPM_REGISTRY:-https://registry.npmmirror.com}
+    command: sh -c "corepack enable && pnpm config set registry $PNPM_REGISTRY && pnpm config set fetch-retries 8 && pnpm config set fetch-retry-mintimeout 10000 && pnpm config set fetch-retry-maxtimeout 120000 && pnpm config set fetch-timeout 120000 && pnpm install --prefer-offline && pnpm dev --host 0.0.0.0 --port 4321"
     depends_on:
       rd-dev:
         condition: service_healthy

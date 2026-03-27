@@ -217,31 +217,17 @@ export type UserChartDefinition = {
 export const USER_CHART_DEFINITIONS: UserChartDefinition[] = [
     {
         id: "chart-1",
-        title: "趋势图 1",
+        title: "气血",
         xAxisName: "时间",
-        yAxisName: "指标A",
-        fallbackPoints: [
-            { x: 1, y: 10 },
-            { x: 2, y: 10 },
-            { x: 3, y: 10 },
-            { x: 4, y: 10 },
-            { x: 5, y: 10 },
-            { x: 6, y: 10 },
-        ],
+        yAxisName: "评分",
+        fallbackPoints: [],
     },
     {
         id: "chart-2",
-        title: "趋势图 2",
+        title: "体质",
         xAxisName: "时间",
-        yAxisName: "指标B",
-        fallbackPoints: [
-            { x: 1, y: 10 },
-            { x: 2, y: 10 },
-            { x: 3, y: 10 },
-            { x: 4, y: 10 },
-            { x: 5, y: 10 },
-            { x: 6, y: 10 },
-        ],
+        yAxisName: "评分",
+        fallbackPoints: [],
     },
     {
         id: "chart-3",

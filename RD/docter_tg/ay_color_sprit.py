@@ -36,7 +36,6 @@ def build_result_text(color_result: str, spirit_result: str) -> str:
         "=" * 30,
         f"【苔色】：{color_result}",
         f"【舌神】：{spirit_result}",
-        "=" * 30,
     ])
 
 

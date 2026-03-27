@@ -133,11 +133,61 @@ def _build_chart_points(seed: int, offset: int, amp: int) -> list[dict[str, int]
 	return points
 
 
+def _load_score_points(category: str, username: str) -> list[dict[str, int]]:
+	score_path = DATA_DIR / category / username / "socre.json"
+	if not score_path.exists():
+		return []
+
+	try:
+		raw = json.loads(score_path.read_text(encoding="utf-8") or "{}")
+	except (OSError, json.JSONDecodeError):
+		return []
+
+	if not isinstance(raw, dict):
+		return []
+
+	records_raw = raw.get("records")
+	if not isinstance(records_raw, list):
+		return []
+
+	temp: list[tuple[str, int]] = []
+	for item in records_raw:
+		if not isinstance(item, dict):
+			continue
+		time_text = _normalize_text(item.get("time"))
+		score_value = item.get("score")
+		numeric_score: int | None = None
+		if isinstance(score_value, int):
+			numeric_score = score_value
+		elif isinstance(score_value, float):
+			numeric_score = int(round(score_value))
+		elif isinstance(score_value, str):
+			try:
+				numeric_score = int(round(float(score_value.strip())))
+			except ValueError:
+				numeric_score = None
+
+		if numeric_score is None:
+			continue
+
+		numeric_score = max(0, min(100, numeric_score))
+		temp.append((time_text, numeric_score))
+
+	if not temp:
+		return []
+
+	temp.sort(key=lambda item: item[0])
+	return [{"x": index + 1, "y": score} for index, (_, score) in enumerate(temp)]
+
+
 def _build_user_charts(username: str) -> list[dict[str, Any]]:
 	seed = sum(ord(char) for char in username)
+	face_points = _load_score_points("face", username)
+	tg_points = _load_score_points("tg", username)
+
 	return [
-		{"id": "chart-1", "points": _build_chart_points(seed, 24, 30)},
-		{"id": "chart-2", "points": _build_chart_points(seed + 5, 16, 24)},
+		{"id": "chart-1", "points": face_points},
+		{"id": "chart-2", "points": tg_points},
 		{"id": "chart-3", "points": _build_chart_points(seed + 11, 42, 32)},
 		{"id": "chart-4", "points": _build_chart_points(seed + 17, 12, 20)},
 	]
