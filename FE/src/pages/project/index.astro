@@ -1,5 +1,6 @@
 ---
 import BaseHead from "../../components/BaseHead.astro";
+import BackToTop from "../../components/BackToTop.astro";
 import Header from "../../components/Header.astro";
 import { siteConfig } from "../../config";
 ---
@@ -595,7 +596,9 @@ import { siteConfig } from "../../config";
                     <div id="empty-state" class="empty-state">
                         <h2>新问诊</h2>
                         <p>-输入问题开始吧-</p>
-                        <p>（提示：如果需要使用面诊或舌诊数据，请先选择对应的附件）</p>
+                        <p>
+                            （提示：如果需要使用面诊或舌诊数据，请先选择对应的附件）
+                        </p>
                         <p>你可以描述症状，也可以上传附件分析身体情况</p>
                     </div>
                 </section>
@@ -709,6 +712,9 @@ import { siteConfig } from "../../config";
                 </form>
             </section>
         </main>
+        <div style="--back-to-top-extra-offset: 56px;">
+            <BackToTop />
+        </div>
 
         <script>
             import { marked } from "marked";

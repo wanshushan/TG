@@ -4,89 +4,26 @@ description: "关于本站"
 pubDate: 2026-03-17
 ---
 ![alt text](share.png)
-# 这是 灵·诊 前端
+# 灵·诊 简介
 
-## 关于项目前端架构
+- `灵·诊`是一个基于中医诊断方法的在线问诊平台，旨在为用户提供便捷、高效的健康咨询服务。通过面诊、舌诊、问诊、心理诊断 等多种方式，`灵·诊`能够帮助用户更好地了解自己的身体状况，并提供个性化的健康建议。
 
-- 使用Astro框架构建
-- 大部分配置可以在`src/config.ts`中进行调整
-- 内容主要放在`src/content`目录下，使用md或mdx格式
 
-## 前端文件结构：
+- 需要说明的是，`灵·诊`并不局限于中医诊断方法，而是通过传统医学结合现代医学与心理学的诊断方法，为用户提供全方位的健康咨询服务。无论是身体上的不适，还是心理上的困扰，`灵·诊`都能为用户提供专业的建议和指导。
 
-```text
-FE/
-├── public
-│   ├── fonts
-│   │   ├── atkinson-bold.woff
-│   │   └── atkinson-regular.woff
-│   ├── favicon.ico
-│   └── favicon.svg
-├── src
-│   ├── assets
-│   │   ├── blog-placeholder-1.jpg
-│   │   ├── blog-placeholder-2.jpg
-│   │   ├── blog-placeholder-3.jpg
-│   │   ├── blog-placeholder-4.jpg
-│   │   ├── blog-placeholder-5.jpg
-│   │   └── blog-placeholder-about.jpg
-│   ├── components
-│   │   ├── BaseHead.astro
-│   │   ├── Footer.astro
-│   │   ├── FormattedDate.astro
-│   │   ├── Header.astro
-│   │   └── HeaderLink.astro
-│   ├── content
-│   │   ├── about
-│   │   │   └── about.md
-│   │   ├── blog
-│   │   │   ├── test
-│   │   │   │   ├── pjs2.png
-│   │   │   │   ├── pjshare1.png
-│   │   │   │   └── test.md
-│   │   │   ├── markdown-style-guide.md
-│   │   │   └── using-mdx.mdx
-│   │   └── index
-│   │       └── index.mdx
-│   ├── layouts
-│   │   └── BlogPost.astro
-│   ├── lib
-│   │   ├── SCROLLBAR_IMPLEMENTATION.md
-│   │   └── SCROLLBAR_USAGE_GUIDE.md
-│   ├── pages
-│   │   ├── blog
-│   │   │   ├── [...slug].astro
-│   │   │   └── index.astro
-│   │   ├── project
-│   │   │   ├── chat
-│   │   │   │   ├── 26-03-17T18-08.md
-│   │   │   │   └── 26-03-17T21-15.md
-│   │   │   ├── api.json
-│   │   │   ├── api.json.ts
-│   │   │   ├── chat.ts
-│   │   │   └── index.astro
-│   │   ├── about.astro
-│   │   ├── index.astro
-│   │   └── rss.xml.js
-│   ├── styles
-│   │   └── global.css
-│   ├── types
-│   │   └── iconify-json.d.ts
-│   ├── config.ts
-│   └── content.config.ts
-├── .env
-├── .gitignore
-├── astro.config.mjs
-├── package-lock.json
-├── package.json
-├── pnpm-lock.yaml
-├── README.md
-└── tsconfig.json
-```
 
-# TODO
+- `灵·诊`的目标是让每个人都能轻松地获取健康咨询服务，帮助用户更好地了解自己的身体状况，并提供个性化的健康建议以及用户健康状态的跟踪与管理。通过`灵·诊 用户页`，用户可以随时查看自己的健康记录和咨询历史，方便用户进行健康管理和跟踪。
 
-- [ ] 用户注册登录页
-- [ ] 首页内容
-- [ ] 资料文章内容
-- [ ] 用户数据页
+
+# 灵·诊 进展
+
+- 目前，`灵·诊`已经完成了基础功能的开发，包括面诊、舌诊、问诊、心理诊断等多种诊断方式的实现，以及用户中心的搭建。用户可以通过`灵·诊`平台进行在线咨询，获取个性化的健康建议，并随时查看自己的健康记录和咨询历史。
+
+
+<br />
+
+
+# 灵·诊 使用
+
+- 我们目前已经实现了项目的docker化部署，用户可以通过docker快捷的将`灵·诊`部署到各个环境当中，并且无需为环境配置与依赖安装烦恼。
+- 并且我们配置了Cloudflare Tunnel，用户可以通过Cloudflare Tunnel将`灵·诊`部署到本地环境当中，并且通过Cloudflare Tunnel提供的域名访问`灵·诊`，无需进行复杂的网络配置，极大的降低了部署的难度与成本。

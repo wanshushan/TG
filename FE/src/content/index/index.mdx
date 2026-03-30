@@ -14,7 +14,7 @@ import ScrollStack, { ScrollStackItem } from './ScrollStack'
 <h3 style={{ marginTop: "0.6rem" }}>
   <RotatingText
     client:load
-    texts={["记录你的身体", "分析你的健康", "看见你的变化"]}
+    texts={["记录你的身体", "了解你的心理","分析你的健康", "看见你的变化"]}
     rotationInterval={2200}
     splitBy="characters"
     staggerDuration={0.02}
@@ -45,8 +45,8 @@ import ScrollStack, { ScrollStackItem } from './ScrollStack'
   `}
 </style>
 
-<h2 class="home-nav-desktop">-- <a href="/face">面诊</a> · <a href="/tg">舌诊</a> · <a href="/project">问诊</a> · <a href="/user">记录</a> --</h2>
-<h3 class="home-nav-mobile">-- <a href="/face">面诊</a> · <a href="/tg">舌诊</a> · <a href="/project">问诊</a> · <a href="/user">记录</a> --</h3>
+<h2 class="home-nav-desktop">-- <a href="/face">面诊</a> · <a href="/tg">舌诊</a> · <a href="/mental">情诊</a> · <a href="/project">问诊</a> · <a href="/user">记录</a> --</h2>
+<h3 class="home-nav-mobile">-- <a href="/face">面诊</a> · <a href="/tg">舌诊</a> · <a href="/mental">情诊</a> · <a href="/project">问诊</a> · <a href="/user">记录</a> --</h3>
 
 <br />
 {/* vw控制移动端，rem控制桌面端 */}
@@ -55,13 +55,14 @@ import ScrollStack, { ScrollStackItem } from './ScrollStack'
   intervalMs={2000}
   size="lg"
   cardWidth="min(85vw, 70rem)"
-  mdBoxWidth="min(90vw, 70rem)"
+  mdBoxWidth="min(100vw, 80rem)"
   mdBoxHeight="40rem"
   items={[
-    { src: "face.png", srcMobile: "face-mb.png", alt: "面诊", href: "/face", mdPath: "FE/src/content/index/face.md" },
-    { src: "tg.png", srcMobile: "tg-mb.png", alt: "舌诊", href: "/tg", mdPath: "FE/src/content/index/tg.md" },
-    { src: "ask.png", srcMobile: "ask-mb.png", alt: "问诊", href: "/project", mdPath: "FE/src/content/index/ask.md" },
-    { src: "user.png", srcMobile: "user-mb.png", alt: "用户中心", href: "/user", mdPath: "FE/src/content/index/user.md" },
+    { src: "index-img/suffimg/deskimg/face.png", srcMobile: "index-img/suffimg/mbimg/face-mb.png", alt: "面诊", href: "/face", mdPath: "face.md" },
+    { src: "index-img/suffimg/deskimg/tg.png", srcMobile: "index-img/suffimg/mbimg/tg-mb.png", alt: "舌诊", href: "/tg", mdPath: "tg.md" },
+    { src: "index-img/suffimg/deskimg/mental.png", srcMobile: "index-img/suffimg/mbimg/mental-mb.png", alt: "情诊", href: "/mental", mdPath: "mental.md" },
+    { src: "index-img/suffimg/deskimg/ask.png", srcMobile: "index-img/suffimg/mbimg/ask-mb.png", alt: "问诊", href: "/project", mdPath: "project.md" },
+    { src: "index-img/suffimg/deskimg/user.png", srcMobile: "index-img/suffimg/mbimg/user-mb.png", alt: "用户中心", href: "/user", mdPath: "user.md" },
   ]}
 />
 

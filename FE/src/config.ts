@@ -18,7 +18,7 @@ export const siteConfig: SiteConfig = {
     description: 'Welcome to 灵·诊!',
     defaultLanguage: 'zh-CN',
     image: {
-        adaptive: false, // 开关：是否启用响应式图片（srcset/sizes），以减少不同设备上的传输负载和提升性能
+        adaptive: true, // 开关：是否启用响应式图片（srcset/sizes），以减少不同设备上的传输负载和提升性能
     },
     themeColor: 'rgb(35, 138, 255)',
     favicon: '/public/icon.png', // 可选：站点的favicon路径（public 目录下资源用绝对路径）
@@ -90,8 +90,9 @@ export enum NavigationItemOrder {
     BLOG = 1,
     FACE = 2,
     TG = 3,
+    MENTAL = 5,
     PROJECT = 4,
-    ABOUT = 5,
+    ABOUT = 6,
 }
 
 /**
@@ -122,6 +123,12 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
         href: '/face',
         label: '面诊',
         icon: 'fa6-regular:face-smile',
+    },
+    {
+        order: NavigationItemOrder.MENTAL,
+        href: '/mental',
+        label: '情诊',
+        icon: 'fa6-regular:face-sad-tear',
     },
     {
         order: NavigationItemOrder.PROJECT,
@@ -231,31 +238,17 @@ export const USER_CHART_DEFINITIONS: UserChartDefinition[] = [
     },
     {
         id: "chart-3",
-        title: "趋势图 3",
-        xAxisName: "时间",
-        yAxisName: "指标C",
-        fallbackPoints: [
-            { x: 1, y: 10 },
-            { x: 2, y: 10 },
-            { x: 3, y: 10 },
-            { x: 4, y: 10 },
-            { x: 5, y: 10 },
-            { x: 6, y: 10 },
-        ],
+        title: "SAS焦虑评分趋势",
+        xAxisName: "评估时间",
+        yAxisName: "标准分",
+        fallbackPoints: [],
     },
     {
         id: "chart-4",
-        title: "趋势图 4",
-        xAxisName: "时间",
-        yAxisName: "指标D",
-        fallbackPoints: [
-            { x: 1, y: 10 },
-            { x: 2, y: 10 },
-            { x: 3, y: 10 },
-            { x: 4, y: 10 },
-            { x: 5, y: 10 },
-            { x: 6, y: 10 },
-        ],
+        title: "SDS抑郁评分趋势",
+        xAxisName: "评估时间",
+        yAxisName: "标准分",
+        fallbackPoints: [],
     },
 ];
 

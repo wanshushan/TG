@@ -480,10 +480,80 @@ async function fetchDashboardFromApi(
         }
 
         const record = payload as Record<string, unknown>;
+        const profile = extractProfileFromApiRecord(record, apiConfig.mapping);
+        let charts = normalizeChartsFromApi(record, apiConfig.mapping);
+
+        // Try to fetch mental health charts data
+        try {
+            const mentalChartsEndpoint = resolveEndpointUrl(
+                "/api/user/charts/mental",
+                options.requestOrigin,
+                options.internalOrigin,
+            );
+
+            const mentalController = new AbortController();
+            const mentalTimeoutId = setTimeout(() => mentalController.abort(), 3000);
+
+            try {
+                const mentalResponse = await fetcher(mentalChartsEndpoint, {
+                    method: "GET",
+                    headers: buildRequestHeaders(options.cookieHeader),
+                    credentials: "include",
+                    signal: mentalController.signal,
+                });
+
+                if (mentalResponse.ok) {
+                    const mentalPayload = (await mentalResponse.json()) as unknown;
+                    if (mentalPayload && typeof mentalPayload === "object") {
+                        const mentalRecord = mentalPayload as Record<string, unknown>;
+                        const chart3Data = mentalRecord.chart3;
+                        const chart4Data = mentalRecord.chart4;
+
+                        // Merge mental health chart data
+                        const chartMap = new Map<string, UserChartPoint[]>();
+                        for (const chart of charts) {
+                            if (
+                                chart.id === "chart-3" &&
+                                chart3Data &&
+                                typeof chart3Data === "object"
+                            ) {
+                                const points = normalizeChartPoints(
+                                    (chart3Data as Record<string, unknown>).points,
+                                    apiConfig.mapping,
+                                    [],
+                                );
+                                chartMap.set("chart-3", points);
+                            } else if (
+                                chart.id === "chart-4" &&
+                                chart4Data &&
+                                typeof chart4Data === "object"
+                            ) {
+                                const points = normalizeChartPoints(
+                                    (chart4Data as Record<string, unknown>).points,
+                                    apiConfig.mapping,
+                                    [],
+                                );
+                                chartMap.set("chart-4", points);
+                            }
+                        }
+
+                        // Update charts with mental health data
+                        charts = charts.map((chart) => {
+                            const points = chartMap.get(chart.id);
+                            return points ? { ...chart, points: clonePoints(points) } : chart;
+                        });
+                    }
+                }
+            } finally {
+                clearTimeout(mentalTimeoutId);
+            }
+        } catch {
+            // Silently ignore mental charts fetch errors
+        }
 
         return {
-            profile: extractProfileFromApiRecord(record, apiConfig.mapping),
-            charts: normalizeChartsFromApi(record, apiConfig.mapping),
+            profile,
+            charts,
         };
     } finally {
         clearTimeout(timeoutId);

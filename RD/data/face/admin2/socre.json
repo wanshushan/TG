@@ -16,6 +16,12 @@
       "recordName": "face-26-03-26T23-43",
       "score": 80,
       "scoreSource": "fallback"
+    },
+    {
+      "time": "2026-03-29T16:19:30.737106",
+      "recordName": "face-26-03-29T16-19",
+      "score": 86,
+      "scoreSource": "fallback"
     }
   ]
 }

@@ -1,0 +1,21 @@
+{
+  "recordName": "tg-26-03-29T16-22",
+  "owner": "admin2",
+  "updatedAt": "2026-03-29T16:23:00.869464",
+  "imagePath": "data/tg/admin2/tg-26-03-29T16-22/tg-26-03-29T16-22.png",
+  "tgData": {
+    "color": "白",
+    "spirit": "荣",
+    "tongueQuality": "",
+    "tongueColor": "淡红舌",
+    "tongueCoatStatus": "舌苔干燥",
+    "tizhiScore": 81,
+    "tizhiScoreSource": "fallback",
+    "rawText": "==============================\n【苔色】：白\n【舌神】：荣\n【苔质类型】：厚舌\n【舌色结果】：淡红舌\n【舌苔状态】：舌苔干燥\n==============================\n【体质评分】：81",
+    "colorSpiritText": "==============================\n【苔色】：白\n【舌神】：荣",
+    "tongueQualityText": "【苔质类型】：厚舌",
+    "tongueColorText": "【舌色结果】：淡红舌",
+    "tongueCoatText": "【舌苔状态】：舌苔干燥\n==============================",
+    "tizhiScoreText": "【体质评分】：81"
+  }
+}

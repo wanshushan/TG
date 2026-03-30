@@ -1,0 +1,1085 @@
+---
+import BaseHead from "../../components/BaseHead.astro";
+import BackToTop from "../../components/BackToTop.astro";
+import Header from "../../components/Header.astro";
+import { siteConfig } from "../../config";
+---
+
+<!doctype html>
+<html lang={siteConfig.defaultLanguage} data-overlayscrollbars-initialize>
+    <head>
+        <BaseHead title="灵诊·情诊" description="AI 情诊页面" />
+        <style>
+            :global(body) {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+            main.chat-page {
+                width: 100%;
+                max-width: none;
+                margin: 0;
+                padding: 0.8rem 0;
+                flex: 1;
+                min-height: 0;
+                display: flex;
+                --chat-radius: 0.95rem;
+                --chat-radius-sm: 0.8rem;
+            }
+            .chat-shell {
+                flex: 1;
+                width: calc(100% - 10px);
+                margin: 0 auto;
+                min-height: 0;
+                border-radius: var(--chat-radius);
+                background: white;
+                display: grid;
+                grid-template-rows: auto minmax(0, 1fr) auto;
+                overflow: hidden;
+            }
+            .chat-topbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 1rem;
+                padding: 1rem 1.1rem;
+                background: rgba(var(--gray-light), 0.75);
+            }
+            .topbar-left {
+                display: grid;
+                grid-template-rows: 2.4rem auto;
+                align-items: center;
+                justify-items: start;
+                row-gap: 0.35rem;
+            }
+            .topbar-right {
+                display: grid;
+                grid-template-rows: 2.4rem auto;
+                align-items: center;
+                justify-items: end;
+                row-gap: 0.35rem;
+            }
+            .chat-topbar h1 {
+                margin: 0;
+                font-size: 1.35rem;
+                line-height: 1.25;
+            }
+            .status {
+                margin: 0;
+                padding: 0.35rem 0.75rem;
+                border-radius: 999px;
+                background: rgba(var(--accent-rgb), 0.12);
+                font-size: 0.8rem;
+                line-height: 1.25;
+                color: var(--accent-dark);
+                white-space: nowrap;
+            }
+            .messages {
+                min-height: 0;
+                overflow-y: auto;
+                padding: 1rem;
+                background: rgba(var(--gray-light), 0.45);
+            }
+            .empty-state {
+                margin: 16vh auto 0;
+                max-width: 500px;
+                text-align: center;
+                border-radius: var(--chat-radius);
+                padding: 1rem 1.2rem;
+                background: rgb(var(--gray-light));
+            }
+            .empty-state h2 {
+                margin: 0 0 0.35rem;
+                font-size: 1.15rem;
+            }
+            .empty-state p {
+                margin: 0;
+                font-size: 0.95rem;
+                color: rgba(var(--gray-dark), 0.82);
+            }
+            :global(.message-row) {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.6rem;
+                width: calc(100% - 20px);
+                margin: 0 auto 0.85rem;
+            }
+            :global(.message-row.user) {
+                flex-direction: row-reverse;
+            }
+            :global(.avatar) {
+                width: 1.95rem;
+                height: 1.95rem;
+                border-radius: 999px;
+                background: rgb(var(--gray-light));
+                color: rgb(var(--gray-dark));
+                font-size: 0.72rem;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            :global(.message-row.user .avatar) {
+                background: rgba(var(--accent-rgb), 0.15);
+                color: rgb(var(--accent-dark));
+            }
+            :global(.bubble) {
+                max-width: min(74%, 720px);
+                padding: 0.78rem 1rem;
+                border-radius: 1.08rem;
+                background: white;
+                color: rgb(var(--gray-dark));
+                font-size: 0.95rem;
+                line-height: 1.55;
+                word-break: break-word;
+            }
+            :global(.message-row.ai .bubble) {
+                border-top-left-radius: 0.52rem;
+            }
+            :global(.message-row.user .bubble) {
+                background: var(--accent);
+                color: white;
+                border-radius: 1.08rem;
+                border-top-right-radius: 0.52rem;
+            }
+            :global(.bubble)
+                :where(h1, h2, h3, h4, h5, h6, p, ul, ol, blockquote, pre) {
+                margin: 0 0 0.72rem;
+            }
+            :global(.bubble)
+                :where(
+                    p:last-child,
+                    ul:last-child,
+                    ol:last-child,
+                    blockquote:last-child,
+                    pre:last-child
+                ) {
+                margin-bottom: 0;
+            }
+            :global(.bubble) :where(ul, ol) {
+                padding-left: 1.2rem;
+            }
+            :global(.bubble) :where(pre) {
+                padding: 0.68rem 0.75rem;
+                overflow-x: auto;
+                border-radius: 0.62rem;
+                background: rgba(var(--gray-light), 0.75);
+            }
+            :global(.bubble) :where(code) {
+                padding: 0.1rem 0.35rem;
+                border-radius: 0.4rem;
+                background: rgba(var(--gray-light), 0.85);
+            }
+            :global(.message-row.user .bubble) :where(code) {
+                background: rgba(255, 255, 255, 0.18);
+                color: white;
+            }
+            .chat-form {
+                display: flex;
+                align-items: flex-end;
+                gap: 0.7rem;
+                padding: 0.85rem 1rem 1rem;
+                background: rgba(var(--gray-light), 0.75);
+            }
+            .chat-form textarea {
+                flex: 1;
+                margin: 0;
+                min-height: 2.9rem;
+                max-height: 10rem;
+                box-sizing: border-box;
+                padding: 0.72rem 0.8rem;
+                border-radius: var(--chat-radius-sm);
+                background: white;
+                color: rgb(var(--gray-dark));
+                font-size: 0.95rem;
+                line-height: 1.45;
+                resize: none;
+                overflow-y: auto;
+            }
+            .chat-form textarea:focus {
+                outline: none;
+            }
+            .chat-form button {
+                height: 2.9rem;
+                padding: 0 1rem;
+                border: none;
+                border-radius: var(--chat-radius-sm);
+                background: var(--accent-dark);
+                color: white;
+                font-size: 0.95rem;
+                cursor: pointer;
+            }
+            .chat-form button:disabled {
+                opacity: 0.55;
+                cursor: not-allowed;
+            }
+            @media (max-width: 720px) {
+                .chat-topbar {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 0.55rem;
+                }
+                .topbar-right {
+                    width: 100%;
+                    justify-items: start;
+                }
+                .history-picker,
+                .model-picker {
+                    width: 100%;
+                    box-sizing: border-box;
+                }
+                .picker-trigger {
+                    flex: 1;
+                    max-width: 100%;
+                }
+                .picker-panel {
+                    left: 0;
+                    right: 0;
+                    width: auto;
+                    max-width: 100%;
+                }
+                .status {
+                    white-space: normal;
+                }
+                :global(.bubble) {
+                    max-width: 90%;
+                }
+                .chat-form {
+                    padding: 0.75rem;
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+                .chat-form button {
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <Header />
+        <main class="chat-page">
+            <section class="chat-shell">
+                <div class="chat-topbar">
+                    <div class="topbar-left">
+                        <h1>灵诊·情诊</h1>
+                        <label
+                            class="history-picker picker-more"
+                            for="history-select"
+                            id="history-picker-root"
+                        >
+                            <span>情诊记录</span>
+                            <select
+                                id="history-select"
+                                class="picker-native"
+                                aria-label="选择情诊记录"></select>
+                            <button
+                                id="history-picker-trigger"
+                                class="picker-trigger"
+                                type="button"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                aria-controls="history-picker-panel"
+                            >
+                                <span
+                                    id="history-picker-label"
+                                    class="picker-trigger-label">当前会话</span
+                                >
+                                <svg
+                                    class="picker-trigger-icon"
+                                    viewBox="0 0 24 24"
+                                    width="14"
+                                    height="14"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M7 10l5 5 5-5z"></path>
+                                </svg>
+                            </button>
+                            <div
+                                id="history-picker-panel"
+                                class="picker-panel"
+                                role="listbox"
+                                aria-label="情诊记录选项"
+                            >
+                                <div
+                                    id="history-picker-options"
+                                    class="picker-options"
+                                >
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="topbar-right">
+                        <div id="status" class="status">
+                            正在读取 API 配置...
+                        </div>
+                        <label
+                            class="model-picker picker-more"
+                            for="model-select"
+                            id="model-picker-root"
+                        >
+                            <span>模型/API</span>
+                            <select
+                                id="model-select"
+                                class="picker-native"
+                                aria-label="选择模型"></select>
+                            <button
+                                id="model-picker-trigger"
+                                class="picker-trigger"
+                                type="button"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                aria-controls="model-picker-panel"
+                            >
+                                <span
+                                    id="model-picker-label"
+                                    class="picker-trigger-label">未选择</span
+                                >
+                                <svg
+                                    class="picker-trigger-icon"
+                                    viewBox="0 0 24 24"
+                                    width="14"
+                                    height="14"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M7 10l5 5 5-5z"></path>
+                                </svg>
+                            </button>
+                            <div
+                                id="model-picker-panel"
+                                class="picker-panel"
+                                role="listbox"
+                                aria-label="模型选项"
+                            >
+                                <div
+                                    id="model-picker-options"
+                                    class="picker-options"
+                                >
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <section id="messages" class="messages" aria-live="polite">
+                    <div id="empty-state" class="empty-state">
+                        <h2>新情诊</h2>
+                        <p>- 输入你好开始情诊 -</p>
+                        <p>一共有4个流程：</p>
+                        <p>
+                        1. 量表评估：根据自己的情况回答40个问题（选项1，2，3，4）
+                        </p>
+                        <p>
+                        2. 个性化分析：回答情诊师的问题，提供更多信息
+                        </p>
+                        <p>
+                        3. 结果解读：对信息进行分析，给出情志状态评估和建议
+                        </p>
+                    </div>
+                </section>
+                <form id="chat-form" class="chat-form">
+                    <textarea
+                        id="user-input"
+                        rows="1"
+                        placeholder="Enter 发送，Shift+Enter 换行  ( 选项 ---- 1：没有或很少有时间有; 2：小部分时间有; 3：相当多时间有; 4：绝大部分或全部时间有 )"
+                        required></textarea>
+                    <button id="send-btn" type="submit">发送</button>
+                </form>
+            </section>
+        </main>
+        <BackToTop />
+
+        <script>
+            import { marked } from "marked";
+            import DOMPurify from "dompurify";
+
+            type ChatMessage = {
+                role: "user" | "assistant";
+                content: string;
+            };
+
+            type ModelOption = {
+                name: string;
+                model: string;
+                apiEndpoint: string;
+                stream: boolean;
+                temperature: number | null;
+            };
+
+            const configUrl = "/api/mental/config";
+            const chatUrl = "/api/mental";
+
+            const statusEl = document.querySelector(
+                "#status",
+            ) as HTMLDivElement | null;
+            const messagesEl = document.querySelector(
+                "#messages",
+            ) as HTMLElement | null;
+            const emptyStateEl = document.querySelector(
+                "#empty-state",
+            ) as HTMLDivElement | null;
+            const formEl = document.querySelector(
+                "#chat-form",
+            ) as HTMLFormElement | null;
+            const inputEl = document.querySelector(
+                "#user-input",
+            ) as HTMLTextAreaElement | null;
+            const sendBtn = document.querySelector(
+                "#send-btn",
+            ) as HTMLButtonElement | null;
+
+            const modelSelectEl = document.querySelector(
+                "#model-select",
+            ) as HTMLSelectElement | null;
+            const modelPickerRootEl = document.querySelector(
+                "#model-picker-root",
+            ) as HTMLLabelElement | null;
+            const modelPickerTriggerEl = document.querySelector(
+                "#model-picker-trigger",
+            ) as HTMLButtonElement | null;
+            const modelPickerLabelEl = document.querySelector(
+                "#model-picker-label",
+            ) as HTMLSpanElement | null;
+            const modelPickerPanelEl = document.querySelector(
+                "#model-picker-panel",
+            ) as HTMLDivElement | null;
+            const modelPickerOptionsEl = document.querySelector(
+                "#model-picker-options",
+            ) as HTMLDivElement | null;
+
+            const historySelectEl = document.querySelector(
+                "#history-select",
+            ) as HTMLSelectElement | null;
+            const historyPickerRootEl = document.querySelector(
+                "#history-picker-root",
+            ) as HTMLLabelElement | null;
+            const historyPickerTriggerEl = document.querySelector(
+                "#history-picker-trigger",
+            ) as HTMLButtonElement | null;
+            const historyPickerLabelEl = document.querySelector(
+                "#history-picker-label",
+            ) as HTMLSpanElement | null;
+            const historyPickerPanelEl = document.querySelector(
+                "#history-picker-panel",
+            ) as HTMLDivElement | null;
+            const historyPickerOptionsEl = document.querySelector(
+                "#history-picker-options",
+            ) as HTMLDivElement | null;
+
+            let modelOptions: ModelOption[] = [];
+            let selectedOptionName = "";
+            let messages: ChatMessage[] = [];
+            let recordNames: string[] = [];
+            let currentRecordName = "";
+            let sending = false;
+            let syncModelPickerMenu = () => {};
+            let syncHistoryPickerMenu = () => {};
+
+            function setStatus(text: string) {
+                if (statusEl) {
+                    statusEl.textContent = text;
+                }
+            }
+
+            function getErrorMessage(error: unknown): string {
+                if (error instanceof Error) {
+                    return error.message;
+                }
+                return String(error);
+            }
+
+            function renderMarkdownToHtml(markdownText: string): string {
+                const rendered = marked.parse(markdownText, {
+                    gfm: true,
+                    breaks: true,
+                }) as string;
+                return DOMPurify.sanitize(rendered);
+            }
+
+            function clearMessagesDom() {
+                if (!messagesEl) {
+                    return;
+                }
+                for (const row of messagesEl.querySelectorAll(".message-row")) {
+                    row.remove();
+                }
+            }
+
+            function renderMessageRow(message: ChatMessage) {
+                if (!messagesEl || !emptyStateEl) {
+                    return;
+                }
+
+                emptyStateEl.style.display = "none";
+
+                const row = document.createElement("article");
+                row.className = `message-row ${message.role === "user" ? "user" : "ai"}`;
+
+                const avatar = document.createElement("div");
+                avatar.className = "avatar";
+                avatar.textContent = message.role === "user" ? "你" : "AI";
+
+                const bubble = document.createElement("div");
+                bubble.className = "bubble";
+                if (message.role === "assistant") {
+                    bubble.innerHTML = renderMarkdownToHtml(message.content);
+                } else {
+                    bubble.textContent = message.content;
+                }
+
+                row.appendChild(avatar);
+                row.appendChild(bubble);
+                messagesEl.appendChild(row);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+
+            function renderAllMessages() {
+                clearMessagesDom();
+                if (!messagesEl || !emptyStateEl) {
+                    return;
+                }
+                if (messages.length === 0) {
+                    emptyStateEl.style.display = "block";
+                    return;
+                }
+                for (const message of messages) {
+                    renderMessageRow(message);
+                }
+            }
+
+            function sortRecordNames(names: string[]): string[] {
+                return [...names].sort((a, b) =>
+                    a === b ? 0 : a > b ? -1 : 1,
+                );
+            }
+
+            function autoResizeTextarea() {
+                if (!inputEl) {
+                    return;
+                }
+                inputEl.style.height = "auto";
+                inputEl.style.height = `${Math.min(inputEl.scrollHeight, 160)}px`;
+            }
+
+            function setupPickerMenu(args: {
+                rootEl: HTMLElement | null;
+                selectEl: HTMLSelectElement | null;
+                triggerEl: HTMLButtonElement | null;
+                labelEl: HTMLSpanElement | null;
+                panelEl: HTMLDivElement | null;
+                optionsEl: HTMLDivElement | null;
+                emptyLabel: string;
+            }): () => void {
+                const {
+                    rootEl,
+                    selectEl,
+                    triggerEl,
+                    labelEl,
+                    panelEl,
+                    optionsEl,
+                    emptyLabel,
+                } = args;
+
+                if (
+                    !rootEl ||
+                    !selectEl ||
+                    !triggerEl ||
+                    !labelEl ||
+                    !panelEl ||
+                    !optionsEl
+                ) {
+                    return () => {};
+                }
+
+                const closePanel = () => {
+                    panelEl.classList.remove("is-open");
+                    triggerEl.setAttribute("aria-expanded", "false");
+                    panelEl.style.transform = "translateX(0)";
+                };
+
+                const adjustPanelPosition = () => {
+                    panelEl.style.transform = "translateX(0)";
+                    const viewportGap = 8;
+                    const rect = panelEl.getBoundingClientRect();
+                    let offsetX = 0;
+
+                    if (rect.right > window.innerWidth - viewportGap) {
+                        offsetX = window.innerWidth - viewportGap - rect.right;
+                    }
+                    if (rect.left + offsetX < viewportGap) {
+                        offsetX += viewportGap - (rect.left + offsetX);
+                    }
+
+                    if (offsetX !== 0) {
+                        panelEl.style.transform = `translateX(${offsetX}px)`;
+                    }
+                };
+
+                const renderOptions = () => {
+                    const selectOptions = Array.from(selectEl.options);
+                    const selectedOption =
+                        selectOptions.find(
+                            (option) => option.value === selectEl.value,
+                        ) || selectOptions[0];
+
+                    labelEl.textContent =
+                        selectedOption?.textContent?.trim() || emptyLabel;
+                    optionsEl.innerHTML = "";
+
+                    for (const option of selectOptions) {
+                        const optionButton = document.createElement("button");
+                        optionButton.type = "button";
+                        optionButton.className = "picker-option";
+                        optionButton.textContent = option.textContent || "";
+                        const isSelected = option.value === selectEl.value;
+                        optionButton.setAttribute(
+                            "aria-selected",
+                            isSelected ? "true" : "false",
+                        );
+                        if (isSelected) {
+                            optionButton.classList.add("is-selected");
+                        }
+                        optionButton.addEventListener("click", () => {
+                            if (selectEl.value !== option.value) {
+                                selectEl.value = option.value;
+                                selectEl.dispatchEvent(new Event("change"));
+                            }
+                            closePanel();
+                        });
+                        optionsEl.appendChild(optionButton);
+                    }
+                };
+
+                if (rootEl.dataset.pickerInitialized !== "true") {
+                    triggerEl.addEventListener("click", (event) => {
+                        event.stopPropagation();
+                        const nextOpen = !panelEl.classList.contains("is-open");
+                        panelEl.classList.toggle("is-open", nextOpen);
+                        triggerEl.setAttribute(
+                            "aria-expanded",
+                            nextOpen ? "true" : "false",
+                        );
+                        if (nextOpen) {
+                            requestAnimationFrame(adjustPanelPosition);
+                        }
+                    });
+
+                    document.addEventListener("click", (event) => {
+                        const target = event.target;
+                        if (!(target instanceof Node)) {
+                            return;
+                        }
+                        if (!rootEl.contains(target)) {
+                            closePanel();
+                        }
+                    });
+
+                    document.addEventListener("keydown", (event) => {
+                        if (event.key === "Escape") {
+                            closePanel();
+                        }
+                    });
+
+                    window.addEventListener("resize", () => {
+                        if (panelEl.classList.contains("is-open")) {
+                            adjustPanelPosition();
+                        }
+                    });
+
+                    selectEl.addEventListener("change", renderOptions);
+                    rootEl.dataset.pickerInitialized = "true";
+                }
+
+                renderOptions();
+                return renderOptions;
+            }
+
+            function renderModelOptions() {
+                if (!modelSelectEl) {
+                    return;
+                }
+                modelSelectEl.innerHTML = "";
+                for (const option of modelOptions) {
+                    const optionEl = document.createElement("option");
+                    optionEl.value = option.name;
+                    optionEl.textContent = option.name;
+                    modelSelectEl.appendChild(optionEl);
+                }
+                modelSelectEl.value = selectedOptionName;
+                syncModelPickerMenu();
+            }
+
+            function renderHistoryOptions() {
+                if (!historySelectEl) {
+                    return;
+                }
+
+                historySelectEl.innerHTML = "";
+                const currentOption = document.createElement("option");
+                currentOption.value = "";
+                currentOption.textContent = "当前会话";
+                historySelectEl.appendChild(currentOption);
+
+                for (const name of recordNames) {
+                    const optionEl = document.createElement("option");
+                    optionEl.value = name;
+                    optionEl.textContent = name;
+                    historySelectEl.appendChild(optionEl);
+                }
+
+                historySelectEl.value = currentRecordName;
+                syncHistoryPickerMenu();
+            }
+
+            async function fetchConfig() {
+                const response = await fetch(configUrl, {
+                    cache: "no-store",
+                    credentials: "include",
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const payload = (await response.json()) as {
+                    selectedOptionName?: unknown;
+                    modelOptions?: unknown;
+                };
+
+                const options = Array.isArray(payload.modelOptions)
+                    ? payload.modelOptions
+                          .filter((item): item is ModelOption => {
+                              if (!item || typeof item !== "object") {
+                                  return false;
+                              }
+                              const model = item as Record<string, unknown>;
+                              return (
+                                  typeof model.name === "string" &&
+                                  typeof model.model === "string" &&
+                                  typeof model.apiEndpoint === "string"
+                              );
+                          })
+                          .map((item) => ({
+                              name: item.name,
+                              model: item.model,
+                              apiEndpoint: item.apiEndpoint,
+                              stream: Boolean(item.stream),
+                              temperature:
+                                  typeof item.temperature === "number"
+                                      ? item.temperature
+                                      : null,
+                          }))
+                    : [];
+
+                if (options.length === 0) {
+                    throw new Error("未读取到可用模型");
+                }
+
+                modelOptions = options;
+                const selected =
+                    typeof payload.selectedOptionName === "string"
+                        ? payload.selectedOptionName
+                        : "";
+                selectedOptionName =
+                    options.find((item) => item.name === selected)?.name ||
+                    options[0].name;
+
+                renderModelOptions();
+            }
+
+            async function fetchHistoryList() {
+                const response = await fetch(`${chatUrl}?action=list`, {
+                    cache: "no-store",
+                    credentials: "include",
+                });
+                if (!response.ok) {
+                    throw new Error(`读取记录失败：HTTP ${response.status}`);
+                }
+                const payload = (await response.json()) as {
+                    records?: unknown;
+                };
+                const names = Array.isArray(payload.records)
+                    ? payload.records
+                          .filter(
+                              (item): item is string =>
+                                  typeof item === "string",
+                          )
+                          .map((item) => item.trim())
+                          .filter((item) => item.length > 0)
+                    : [];
+                recordNames = sortRecordNames(names);
+                renderHistoryOptions();
+            }
+
+            async function loadRecord(recordName: string) {
+                const response = await fetch(
+                    `${chatUrl}?action=load&name=${encodeURIComponent(recordName)}`,
+                    {
+                        cache: "no-store",
+                        credentials: "include",
+                    },
+                );
+                if (!response.ok) {
+                    const detail = (await response.text()).trim();
+                    throw new Error(
+                        `读取记录失败：HTTP ${response.status}${detail ? ` - ${detail}` : ""}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    recordName?: unknown;
+                    messages?: unknown;
+                };
+
+                const loaded = Array.isArray(payload.messages)
+                    ? payload.messages
+                          .filter((item): item is ChatMessage => {
+                              if (!item || typeof item !== "object") {
+                                  return false;
+                              }
+                              const m = item as Record<string, unknown>;
+                              return (
+                                  (m.role === "user" ||
+                                      m.role === "assistant") &&
+                                  typeof m.content === "string"
+                              );
+                          })
+                          .map((item) => ({
+                              role: item.role,
+                              content: item.content,
+                          }))
+                    : [];
+
+                messages = loaded;
+                currentRecordName =
+                    typeof payload.recordName === "string"
+                        ? payload.recordName
+                        : recordName;
+                renderAllMessages();
+                renderHistoryOptions();
+                setStatus(`已加载记录：${currentRecordName}`);
+            }
+
+            async function saveRecord() {
+                if (messages.length === 0) {
+                    return;
+                }
+                const response = await fetch(chatUrl, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        recordName: currentRecordName || null,
+                        messages,
+                    }),
+                });
+                if (!response.ok) {
+                    const detail = (await response.text()).trim();
+                    throw new Error(
+                        `保存失败：HTTP ${response.status}${detail ? ` - ${detail}` : ""}`,
+                    );
+                }
+                const payload = (await response.json()) as {
+                    recordName?: unknown;
+                    records?: unknown;
+                };
+                if (typeof payload.recordName === "string") {
+                    currentRecordName = payload.recordName;
+                }
+                if (Array.isArray(payload.records)) {
+                    recordNames = sortRecordNames(
+                        payload.records
+                            .filter(
+                                (item): item is string =>
+                                    typeof item === "string",
+                            )
+                            .map((item) => item.trim())
+                            .filter((item) => item.length > 0),
+                    );
+                }
+                renderHistoryOptions();
+            }
+
+            async function sendMessage(content: string) {
+                if (sending) {
+                    return;
+                }
+                sending = true;
+                if (sendBtn) {
+                    sendBtn.disabled = true;
+                }
+
+                const userMessage: ChatMessage = { role: "user", content };
+                messages.push(userMessage);
+                renderMessageRow(userMessage);
+
+                const aiMessage: ChatMessage = {
+                    role: "assistant",
+                    content: "",
+                };
+                messages.push(aiMessage);
+                renderMessageRow(aiMessage);
+
+                const aiRows = messagesEl?.querySelectorAll(
+                    ".message-row.ai .bubble",
+                );
+                const aiBubble =
+                    aiRows && aiRows.length > 0
+                        ? (aiRows[aiRows.length - 1] as HTMLDivElement)
+                        : null;
+
+                try {
+                    setStatus("正在分析...");
+
+                    const response = await fetch(chatUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({
+                            selectedOptionName,
+                            messages,
+                            stream: true,
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        const detail = (await response.text()).trim();
+                        throw new Error(
+                            `HTTP ${response.status}${detail ? ` - ${detail}` : ""}`,
+                        );
+                    }
+
+                    const reader = response.body?.getReader();
+                    if (!reader) {
+                        throw new Error("未获取到响应流");
+                    }
+
+                    const decoder = new TextDecoder();
+                    let fullText = "";
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) {
+                            break;
+                        }
+                        const chunk = decoder.decode(value, { stream: true });
+                        fullText += chunk;
+                        aiMessage.content = fullText;
+                        if (aiBubble) {
+                            aiBubble.innerHTML = renderMarkdownToHtml(
+                                fullText || "...",
+                            );
+                        }
+                        if (messagesEl) {
+                            messagesEl.scrollTop = messagesEl.scrollHeight;
+                        }
+                    }
+
+                    aiMessage.content = fullText.trim() || "（未返回有效内容）";
+                    if (aiBubble) {
+                        aiBubble.innerHTML = renderMarkdownToHtml(
+                            aiMessage.content,
+                        );
+                    }
+
+                    await saveRecord();
+                    setStatus("已完成");
+                } catch (error) {
+                    const message = getErrorMessage(error);
+                    aiMessage.content = `请求失败：${message}`;
+                    if (aiBubble) {
+                        aiBubble.innerHTML = renderMarkdownToHtml(
+                            aiMessage.content,
+                        );
+                    }
+                    setStatus(`错误：${message}`);
+                } finally {
+                    sending = false;
+                    if (sendBtn) {
+                        sendBtn.disabled = false;
+                    }
+                }
+            }
+
+            if (formEl && inputEl) {
+                formEl.addEventListener("submit", async (event) => {
+                    event.preventDefault();
+                    const content = inputEl.value.trim();
+                    if (!content || sending) {
+                        return;
+                    }
+                    inputEl.value = "";
+                    autoResizeTextarea();
+                    await sendMessage(content);
+                });
+
+                inputEl.addEventListener("keydown", (event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        formEl.requestSubmit();
+                    }
+                });
+
+                inputEl.addEventListener("input", autoResizeTextarea);
+            }
+
+            if (modelSelectEl) {
+                modelSelectEl.addEventListener("change", (event) => {
+                    const target = event.target as HTMLSelectElement;
+                    selectedOptionName = target.value;
+                    syncModelPickerMenu();
+                });
+            }
+
+            if (historySelectEl) {
+                historySelectEl.addEventListener("change", async (event) => {
+                    const target = event.target as HTMLSelectElement;
+                    const value = target.value;
+                    if (!value) {
+                        currentRecordName = "";
+                        messages = [];
+                        renderAllMessages();
+                        setStatus("当前会话");
+                        return;
+                    }
+                    try {
+                        await loadRecord(value);
+                    } catch (error) {
+                        setStatus(`错误：${getErrorMessage(error)}`);
+                    }
+                });
+            }
+
+            syncModelPickerMenu = setupPickerMenu({
+                rootEl: modelPickerRootEl,
+                selectEl: modelSelectEl,
+                triggerEl: modelPickerTriggerEl,
+                labelEl: modelPickerLabelEl,
+                panelEl: modelPickerPanelEl,
+                optionsEl: modelPickerOptionsEl,
+                emptyLabel: "未选择",
+            });
+
+            syncHistoryPickerMenu = setupPickerMenu({
+                rootEl: historyPickerRootEl,
+                selectEl: historySelectEl,
+                triggerEl: historyPickerTriggerEl,
+                labelEl: historyPickerLabelEl,
+                panelEl: historyPickerPanelEl,
+                optionsEl: historyPickerOptionsEl,
+                emptyLabel: "当前会话",
+            });
+
+            async function init() {
+                try {
+                    await fetchConfig();
+                    await fetchHistoryList();
+                    renderAllMessages();
+                    setStatus("就绪");
+                } catch (error) {
+                    setStatus(`初始化失败：${getErrorMessage(error)}`);
+                }
+            }
+
+            init();
+        </script>
+    </body>
+</html>

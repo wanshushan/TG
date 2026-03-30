@@ -12,6 +12,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from chat.chat_wz import router as chat_router
 from doctor_face.face_doc import router as face_doc_router
 from doctor_face.face import router as face_router
+from docter_mental.mentai import router as mental_router
 from docter_tg.tg import router as tg_router
 from login.login import router as login_router
 
@@ -121,6 +122,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_router)
     app.include_router(face_router)
     app.include_router(face_doc_router)
+    app.include_router(mental_router)
     app.include_router(tg_router)
     return app
 

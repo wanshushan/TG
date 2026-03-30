@@ -1,0 +1,15 @@
+{
+  "recordName": "26-03-28T07:50",
+  "owner": "admin2",
+  "updatedAt": "2026-03-28T07:50:44.377772",
+  "messages": [
+    {
+      "role": "user",
+      "content": "1"
+    },
+    {
+      "role": "assistant",
+      "content": "请求出错：请求失败：HTTP 500 - {\"error\":\"环境变量 DEEPSEEK_API_KEY 未设置，请在 .env 中配置后重启服务\"}"
+    }
+  ]
+}

@@ -10,7 +10,7 @@
     "passwordSalt": "b1de49b842169d67e3e405f65a69f6df",
     "passwordHash": "c86149603d823f00de12affa0d23202e0a3c8d0fae1bc2d91a18f4282f64ac48",
     "bio": "你好，admin2！欢迎使用灵·诊。",
-    "avatar": "pjs2.png",
+    "avatar": "doctor.png",
     "links": []
   },
   "111": {
@@ -25,6 +25,13 @@
     "passwordHash": "41099114dc41e9b43d62bcc6d5f8a2cfd03ba6dd0edcbddf07ca180e1a30f9d4",
     "bio": "你好，www！欢迎使用灵·诊。",
     "avatar": "",
+    "links": []
+  },
+  "test": {
+    "passwordSalt": "07b47820ee9e8be63a3f1e5a4391ddb7",
+    "passwordHash": "7e91fdbc5781505db4a88b99cf7ee3beeabc6382b352a378ddc534cac4a0fb90",
+    "bio": "你好，test！欢迎使用灵·诊。",
+    "avatar": "doctor.png",
     "links": []
   }
 }

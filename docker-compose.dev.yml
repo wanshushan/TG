@@ -3,6 +3,8 @@ services:
     build:
       context: ./RD
       dockerfile: Dockerfile
+    env_file:
+      - ./.env
     environment:
       RD_ALLOWED_ORIGINS: http://127.0.0.1:4321,http://localhost:4321
       RD_SESSION_SECRET: change-this-to-a-strong-secret

@@ -84,7 +84,7 @@ def _create_user(username: str, password: str) -> None:
 			"passwordSalt": salt_hex,
 			"passwordHash": password_hash,
 			"bio": f"你好，{username}！欢迎使用灵·诊。",
-			"avatar": "",
+			"avatar": "doctor.png",
 			"links": [],
 		}
 
