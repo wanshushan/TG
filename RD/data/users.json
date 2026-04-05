@@ -13,23 +13,9 @@
     "avatar": "doctor.png",
     "links": []
   },
-  "111": {
-    "passwordSalt": "a115d73eb823ca9da48354c95a5a4004",
-    "passwordHash": "8ba18b3334cd9c267709f532e1c37dd1871b1ec1b5a7751a4bac16b999d8fce5",
-    "bio": "你好，111！欢迎使用灵·诊。",
-    "avatar": "",
-    "links": []
-  },
-  "www": {
-    "passwordSalt": "587911c649701f13ff194f338e9ab570",
-    "passwordHash": "41099114dc41e9b43d62bcc6d5f8a2cfd03ba6dd0edcbddf07ca180e1a30f9d4",
-    "bio": "你好，www！欢迎使用灵·诊。",
-    "avatar": "",
-    "links": []
-  },
   "test": {
-    "passwordSalt": "07b47820ee9e8be63a3f1e5a4391ddb7",
-    "passwordHash": "7e91fdbc5781505db4a88b99cf7ee3beeabc6382b352a378ddc534cac4a0fb90",
+    "passwordSalt": "d2d03dbc3d5500aa04ccf5bf71caba5b",
+    "passwordHash": "1b07a6b4af7bbcedd127d5ec21c138e910725561b0cc1f5837f2da484053a76e",
     "bio": "你好，test！欢迎使用灵·诊。",
     "avatar": "doctor.png",
     "links": []

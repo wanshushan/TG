@@ -71,6 +71,9 @@ const headerUserFallbackName = getUserFallbackName();
 const headerUserPagePath = getUserPagePath();
 const headerAuthStateStorageKey = getAuthStateStorageKey();
 const headerAuthUsernameStorageKey = getAuthUsernameStorageKey();
+const headerHasSessionCookie = /(?:^|;\s*)rd_session=/.test(
+	Astro.request.headers.get("cookie") || "",
+);
 const navigationItems = getNavigationItems();
 ---
 
@@ -264,6 +267,7 @@ const navigationItems = getNavigationItems();
 		headerUserFallbackName,
 		headerAuthStateStorageKey,
 		headerAuthUsernameStorageKey,
+		headerHasSessionCookie,
 	}}
 >
 	function normalizeText(value) {
@@ -291,6 +295,21 @@ const navigationItems = getNavigationItems();
 	}
 
 	async function syncHeaderUsername() {
+		if (!headerHasSessionCookie) {
+			persistAuthState(false, "");
+			document
+				.querySelectorAll("[data-header-username='true']")
+				.forEach((node) => {
+					node.textContent = headerUserFallbackName;
+
+					const link = node.closest("a");
+					if (link) {
+						link.setAttribute("title", headerUserFallbackName);
+					}
+				});
+			return;
+		}
+
 		try {
 			const response = await fetch(headerUserBridgeEndpoint, {
 				cache: "no-store",
@@ -402,6 +421,7 @@ const navigationItems = getNavigationItems();
 	h2 {
 		margin: 0;
 		font-size: 1em;
+		font-weight: 800;
 	}
 
 	h2 a,

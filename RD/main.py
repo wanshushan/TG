@@ -15,6 +15,7 @@ from doctor_face.face import router as face_router
 from docter_mental.mentai import router as mental_router
 from docter_tg.tg import router as tg_router
 from login.login import router as login_router
+from storage.db import initialize_database
 
 APP_NAME = "RD Auth Service"
 _SESSION_COOKIE_NAME = "rd_session"
@@ -91,6 +92,7 @@ def _get_allowed_origins() -> list[str]:
 
 
 def create_app() -> FastAPI:
+    initialize_database()
     config = _load_config()
     app_name = str(config.get("appName") or APP_NAME).strip() or APP_NAME
     cors = config.get("cors") if isinstance(config.get("cors"), dict) else {}

@@ -74,6 +74,7 @@ const authUsernameStorageKey = getAuthUsernameStorageKey();
 const avatarText = (profile.username.trim()[0] || "U").toUpperCase();
 const coverIcon = resolveIcon("fa6-regular:address-card");
 const profileBioText = isLoggedIn ? "欢迎使用 灵·诊" : "你尚未登录，请登录使用";
+const avatarUploadEndpoint = "/api/user/avatar";
 ---
 
 <!doctype html>
@@ -105,12 +106,17 @@ const profileBioText = isLoggedIn ? "欢迎使用 灵·诊" : "你尚未登录�
             }
 
             .profile-card {
-                border: 1px solid rgba(var(--gray), 0.35);
+                border: 1px solid rgba(var(--accent-rgb), 0.2);
                 border-radius: 1rem;
-                background: white;
+                background: linear-gradient(
+                    140deg,
+                    rgba(255, 255, 255, 0.98),
+                    rgba(var(--gray-light), 0.78)
+                );
                 padding: 0.85rem;
                 display: flex;
                 flex-direction: column;
+                box-shadow: 0 14px 28px rgba(var(--black), 0.08);
             }
 
             .avatar-link {
@@ -119,8 +125,12 @@ const profileBioText = isLoggedIn ? "欢迎使用 灵·诊" : "你尚未登录�
                 border-radius: 0.85rem;
                 overflow: hidden;
                 margin-bottom: 0.85rem;
-                border: 1px solid rgba(var(--gray), 0.3);
+                border: 1px solid rgba(var(--accent-rgb), 0.22);
                 text-decoration: none;
+                padding: 0;
+                background: none;
+                width: 100%;
+                cursor: pointer;
             }
 
             .avatar-image {
@@ -157,6 +167,22 @@ const profileBioText = isLoggedIn ? "欢迎使用 灵·诊" : "你尚未登录�
 
             .avatar-link:hover .avatar-overlay {
                 opacity: 1;
+            }
+
+            .avatar-link:disabled {
+                cursor: default;
+                opacity: 0.9;
+            }
+
+            .avatar-link:disabled .avatar-overlay {
+                display: none;
+            }
+
+            .avatar-tip {
+                margin: -0.35rem 0 0.6rem;
+                font-size: 0.78rem;
+                text-align: center;
+                color: rgba(var(--gray-dark), 0.7);
             }
 
             .avatar-overlay svg {
@@ -247,10 +273,12 @@ const profileBioText = isLoggedIn ? "欢迎使用 灵·诊" : "你尚未登录�
         <main class="user-page">
             <section class="user-shell">
                 <aside class="profile-card">
-                    <a
+                    <button
                         class="avatar-link"
-                        href="/about"
-                        aria-label="查看用户相关页面"
+                        id="avatar-upload-trigger"
+                        type="button"
+                        disabled={!isLoggedIn}
+                        aria-label="上传头像"
                     >
                         {
                             profile.avatar ? (
@@ -283,7 +311,20 @@ const profileBioText = isLoggedIn ? "欢迎使用 灵·诊" : "你尚未登录�
                                 )
                             }
                         </div>
-                    </a>
+                    </button>
+                    <input
+                        id="avatar-upload-input"
+                        type="file"
+                        accept="image/*"
+                        hidden
+                    />
+                    <p class="avatar-tip" id="avatar-tip">
+                        {
+                            isLoggedIn
+                                ? "点击头像上传自定义头像"
+                                : "登录后可上传头像"
+                        }
+                    </p>
 
                     <div class="profile-content">
                         <h1 class="profile-name" id="user-name">
@@ -324,6 +365,7 @@ const profileBioText = isLoggedIn ? "欢迎使用 灵·诊" : "你尚未登录�
                 authStateStorageKey,
                 authUsernameStorageKey,
                 currentUsername: profile.username || fallbackName,
+                avatarUploadEndpoint,
             }}
         >
             function persistAuthState(loggedIn, username) {
@@ -388,6 +430,77 @@ const profileBioText = isLoggedIn ? "欢迎使用 灵·诊" : "你尚未登录�
                 const logoutButton = document.querySelector("#logout-button");
                 if (logoutButton instanceof HTMLButtonElement) {
                     logoutButton.addEventListener("click", handleLogout);
+                }
+
+                const avatarTrigger = document.querySelector(
+                    "#avatar-upload-trigger",
+                );
+                const avatarInput = document.querySelector(
+                    "#avatar-upload-input",
+                );
+                const avatarImage = document.querySelector("#user-avatar");
+                const avatarFallback = document.querySelector(
+                    "#user-avatar-fallback",
+                );
+                const avatarTip = document.querySelector("#avatar-tip");
+
+                if (
+                    avatarTrigger instanceof HTMLButtonElement &&
+                    avatarInput instanceof HTMLInputElement
+                ) {
+                    avatarTrigger.addEventListener("click", () => {
+                        avatarInput.click();
+                    });
+
+                    avatarInput.addEventListener("change", async () => {
+                        const file = avatarInput.files?.[0];
+                        if (!file) {
+                            return;
+                        }
+
+                        const formData = new FormData();
+                        formData.append("image", file);
+
+                        if (avatarTip instanceof HTMLParagraphElement) {
+                            avatarTip.textContent = "头像上传中...";
+                        }
+
+                        try {
+                            const response = await fetch(avatarUploadEndpoint, {
+                                method: "POST",
+                                body: formData,
+                                credentials: "include",
+                            });
+                            if (!response.ok) {
+                                const detail = (await response.text()).trim();
+                                throw new Error(
+                                    detail || `HTTP ${response.status}`,
+                                );
+                            }
+
+                            if (avatarImage instanceof HTMLImageElement) {
+                                avatarImage.src = `/api/user/avatar?t=${Date.now()}`;
+                            } else {
+                                window.location.reload();
+                                return;
+                            }
+
+                            if (avatarFallback instanceof HTMLElement) {
+                                avatarFallback.style.display = "none";
+                            }
+
+                            if (avatarTip instanceof HTMLParagraphElement) {
+                                avatarTip.textContent = "头像已更新";
+                            }
+                        } catch {
+                            if (avatarTip instanceof HTMLParagraphElement) {
+                                avatarTip.textContent =
+                                    "头像上传失败，请稍后重试";
+                            }
+                        } finally {
+                            avatarInput.value = "";
+                        }
+                    });
                 }
             }
         </script>

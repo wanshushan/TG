@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import re
 import time
 from datetime import datetime
@@ -9,6 +8,11 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
+from storage.db import (
+	get_diagnosis_record,
+	list_diagnosis_record_names,
+	save_diagnosis_record,
+)
 
 from .ay_color_sprit import predict_color_spirit
 from .hu import predict_hu_tongue
@@ -27,6 +31,7 @@ TG_DATA_DIR = BASE_DIR / "data" / "tg"
 _MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 _TG_MODEL_DIR = Path(__file__).resolve().parent / "ay_color_sprit"
 TG_RECORD_STEM_PATTERN = re.compile(r"^tg-\d{2}-\d{2}-\d{2}T\d{2}-\d{2}(?:-\d+)?$")
+TG_SCOPE = "tg"
 
 
 def _safe_username(username: str) -> str:
@@ -58,7 +63,7 @@ def _get_user_tg_dir(request: Request) -> tuple[str, Path]:
 	return username, directory
 
 
-def _build_result_paths(user_dir: Path) -> tuple[str, Path, Path, Path]:
+def _build_result_paths(user_dir: Path) -> tuple[str, Path, Path]:
 	base_stem = _format_filename()
 	stem = base_stem
 	suffix = 1
@@ -66,7 +71,7 @@ def _build_result_paths(user_dir: Path) -> tuple[str, Path, Path, Path]:
 		stem = f"{base_stem}-{suffix}"
 		suffix += 1
 	record_dir = user_dir / stem
-	return stem, record_dir, record_dir / f"{stem}.json", record_dir / f"{stem}.png"
+	return stem, record_dir, record_dir / f"{stem}.png"
 
 
 def _extract_result_fields(result_text: str) -> tuple[str, str]:
@@ -105,10 +110,32 @@ def _extract_hu_tongue_coat(result_text: str) -> str:
 	return ""
 
 
+def _resolve_data_file_path(raw_path: str) -> Path | None:
+	value = (raw_path or "").strip()
+	if not value:
+		return None
+
+	candidate = BASE_DIR / value.replace("\\", "/").lstrip("/")
+	try:
+		resolved = candidate.resolve()
+	except OSError:
+		return None
+
+	data_root = (BASE_DIR / "data").resolve()
+	try:
+		resolved.relative_to(data_root)
+	except ValueError:
+		return None
+
+	if not resolved.exists() or not resolved.is_file():
+		return None
+
+	return resolved
+
+
 def _write_tg_result(
 	record_stem: str,
 	record_dir: Path,
-	json_path: Path,
 	image_path: Path,
 	image_bytes: bytes,
 	username: str,
@@ -119,72 +146,15 @@ def _write_tg_result(
 	tizhi_score: int | None = None,
 	tizhi_score_text: str = "",
 	tizhi_score_source: str = "fallback",
-) -> tuple[str, str]:
+) -> str:
 	record_dir.mkdir(parents=True, exist_ok=True)
 	image_path.write_bytes(image_bytes)
 	relative_image_path = f"data/tg/{username}/{record_stem}/{image_path.name}"
-	relative_json_path = f"data/tg/{username}/{record_stem}/{json_path.name}"
-	color, spirit = _extract_result_fields(color_spirit_text)
-	tongue_quality = _extract_tongue_quality(tongue_quality_text)
-	hu_tongue_color = _extract_hu_tongue_color(hu_tongue_color_text)
-	hu_tongue_coat = _extract_hu_tongue_coat(hu_tongue_coat_text)
-	combined_raw_text = "\n".join([
-		color_spirit_text.strip(),
-		tongue_quality_text.strip(),
-		hu_tongue_color_text.strip(),
-		hu_tongue_coat_text.strip(),
-		tizhi_score_text.strip(),
-	]).strip()
-	payload = {
-		"recordName": record_stem,
-		"owner": username,
-		"updatedAt": datetime.now().isoformat(),
-		"imagePath": relative_image_path,
-		"tgData": {
-			"color": color,
-			"spirit": spirit,
-			"tongueQuality": tongue_quality,
-			"tongueColor": hu_tongue_color,
-			"tongueCoatStatus": hu_tongue_coat,
-			"tizhiScore": tizhi_score,
-			"tizhiScoreSource": tizhi_score_source,
-			"rawText": combined_raw_text,
-			"colorSpiritText": color_spirit_text,
-			"tongueQualityText": tongue_quality_text,
-			"tongueColorText": hu_tongue_color_text,
-			"tongueCoatText": hu_tongue_coat_text,
-			"tizhiScoreText": tizhi_score_text,
-		},
-	}
-	temp_path = json_path.with_suffix(".tmp")
-	temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-	temp_path.replace(json_path)
-	return relative_image_path, relative_json_path
+	return relative_image_path
 
 
-def _resolve_record_dir(user_dir: Path, record_name: str) -> Path:
-	name = record_name.strip()
-	if not TG_RECORD_STEM_PATTERN.fullmatch(name):
-		raise HTTPException(status_code=400, detail="记录名称不合法")
-	record_dir = user_dir / name
-	if not record_dir.exists() or not record_dir.is_dir():
-		raise HTTPException(status_code=404, detail="记录不存在")
-	return record_dir
-
-
-def _list_record_names(user_dir: Path) -> list[str]:
-	if not user_dir.exists():
-		return []
-	result: list[str] = []
-	for child in user_dir.iterdir():
-		if not child.is_dir():
-			continue
-		name = child.name
-		if not TG_RECORD_STEM_PATTERN.fullmatch(name):
-			continue
-		if (child / f"{name}.json").exists():
-			result.append(name)
-	return sorted(result, reverse=True)
+def _list_record_names(username: str) -> list[str]:
+	return list_diagnosis_record_names(username, TG_SCOPE)
 
 
 @router.get("/api/tg/history")
@@ -194,32 +164,34 @@ async def tg_history(
 	name: str | None = Query(default=None),
 ):
 	username = _safe_username(_get_session_username(request))
-	user_dir = TG_DATA_DIR / username
 
 	if action == "list":
-		return JSONResponse(content={"records": _list_record_names(user_dir)})
+		return JSONResponse(content={"records": _list_record_names(username)})
 
 	if not name:
 		raise HTTPException(status_code=400, detail="缺少记录名称")
 
-	record_dir = _resolve_record_dir(user_dir, name)
-	record_name = record_dir.name
-	json_path = record_dir / f"{record_name}.json"
-	image_path = record_dir / f"{record_name}.png"
+	record_name = name.strip()
+	if not TG_RECORD_STEM_PATTERN.fullmatch(record_name):
+		raise HTTPException(status_code=400, detail="记录名称不合法")
+
+	record = get_diagnosis_record(username, TG_SCOPE, record_name)
+	if not record:
+		raise HTTPException(status_code=404, detail="记录不存在")
 
 	if action == "load":
-		if not json_path.exists():
-			raise HTTPException(status_code=404, detail="记录文件不存在")
-		try:
-			payload = json.loads(json_path.read_text(encoding="utf-8"))
-		except (OSError, json.JSONDecodeError) as exc:
-			raise HTTPException(status_code=500, detail="记录文件读取失败") from exc
-		if not isinstance(payload, dict):
-			raise HTTPException(status_code=500, detail="记录文件格式错误")
+		payload = record.get("payload") if isinstance(record.get("payload"), dict) else {}
+		if not payload:
+			payload = {
+				"recordName": record_name,
+				"imagePath": record.get("imagePath") or "",
+				"tgData": {"rawText": record.get("resultText") or ""},
+			}
 		return JSONResponse(content=payload)
 
 	if action == "image":
-		if not image_path.exists():
+		image_path = _resolve_data_file_path(str(record.get("imagePath") or ""))
+		if not image_path:
 			raise HTTPException(status_code=404, detail="记录图片不存在")
 		return FileResponse(path=image_path, media_type="image/png")
 
@@ -257,7 +229,7 @@ async def upload_tg_image(request: Request, image: UploadFile = File(...)) -> JS
 	png_bytes = _convert_to_png(raw)
 
 	username, user_dir = _get_user_tg_dir(request)
-	record_stem, record_dir, json_path, image_path = _build_result_paths(user_dir)
+	record_stem, record_dir, image_path = _build_result_paths(user_dir)
 	record_dir.mkdir(parents=True, exist_ok=True)
 	image_path.write_bytes(png_bytes)
 
@@ -288,10 +260,9 @@ async def upload_tg_image(request: Request, image: UploadFile = File(...)) -> JS
 	tizhi_score, tizhi_score_line, is_llm_score = score_tg_tizhi(score_source_text)
 	tizhi_score_source = "llm" if is_llm_score else "fallback"
 
-	relative_image_path, relative_json_path = _write_tg_result(
+	relative_image_path = _write_tg_result(
 		record_stem=record_stem,
 		record_dir=record_dir,
-		json_path=json_path,
 		image_path=image_path,
 		image_bytes=png_bytes,
 		username=username,
@@ -302,6 +273,39 @@ async def upload_tg_image(request: Request, image: UploadFile = File(...)) -> JS
 		tizhi_score=tizhi_score,
 		tizhi_score_text=tizhi_score_line,
 		tizhi_score_source=tizhi_score_source,
+	)
+
+	tg_payload = {
+		"recordName": record_stem,
+		"owner": username,
+		"imagePath": relative_image_path,
+		"resultFile": f"db:tg/{record_stem}",
+		"tgData": {
+			"rawText": "\n".join([
+				color_spirit_text.strip(),
+				tongue_quality_text.strip(),
+				hu_tongue_color_text.strip(),
+				hu_tongue_coat_text.strip(),
+				tizhi_score_line.strip(),
+			]).strip(),
+			"colorSpiritText": color_spirit_text,
+			"tongueQualityText": tongue_quality_text,
+			"tongueColorText": hu_tongue_color_text,
+			"tongueCoatText": hu_tongue_coat_text,
+			"tizhiScore": tizhi_score,
+			"tizhiScoreSource": tizhi_score_source,
+			"tizhiScoreText": tizhi_score_line,
+		},
+	}
+	save_diagnosis_record(
+		username=username,
+		scope=TG_SCOPE,
+		record_name=record_stem,
+		image_path=relative_image_path,
+		result_text=tg_payload["tgData"]["rawText"],
+		payload=tg_payload,
+		score=tizhi_score,
+		score_source=tizhi_score_source,
 	)
 
 	if tizhi_score is not None:
@@ -327,7 +331,7 @@ async def upload_tg_image(request: Request, image: UploadFile = File(...)) -> JS
 			"recordName": record_stem,
 			"filename": image_path.name,
 			"relativePath": relative_image_path,
-			"resultFile": relative_json_path,
+			"resultFile": f"db:tg/{record_stem}",
 			"resultText": result_text,
 			"colorSpiritText": color_spirit_text,
 			"tongueQualityText": tongue_quality_text,

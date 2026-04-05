@@ -1,5 +1,7 @@
 import type { APIRoute } from "astro";
 
+export const prerender = false;
+
 const DEFAULT_RD_BACKEND_BASE_URL = "http://127.0.0.1:3000";
 
 function getBackendBaseUrl(): string {

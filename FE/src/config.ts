@@ -299,7 +299,7 @@ export const USER_PROFILE_CONFIG: UserProfileDataConfig = {
     file: {
         username: "Sign in/up",
         bio: "你尚未登录，请登录使用",
-        avatar: "",
+        avatar: "doctor.png",
         links: FOOTER_SOCIAL_LINKS.map((item) => ({
             name: item.name,
             href: item.href,

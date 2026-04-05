@@ -6,7 +6,6 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from threading import Lock
 from typing import Any
 from urllib import error as url_error
 from urllib import request as url_request
@@ -14,6 +13,15 @@ from urllib import request as url_request
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
+from storage.db import (
+    get_conversation_messages,
+    get_diagnosis_record,
+    get_next_record_name,
+    list_conversation_records,
+    list_diagnosis_record_names,
+    list_user_model_options,
+    save_conversation_record,
+)
 
 router = APIRouter()
 
@@ -25,7 +33,8 @@ FACE_DATA_DIR = DATA_DIR / "face"
 CONFIG_PATH = CHAT_DIR / "api.json"
 PROMPT_PATH = CHAT_DIR / "prompt.md"
 
-_STORE_LOCK = Lock()
+CHAT_SCOPE = "chat"
+FACE_SCOPE = "face"
 
 CHAT_RECORD_NAME_PATTERN = re.compile(r"^\d{2}-\d{2}-\d{2}T\d{2}:\d{2}(?:-\d+)?$")
 SAFE_RECORD_BASENAME_PATTERN = re.compile(r"^\d{2}-\d{2}-\d{2}T\d{2}-\d{2}(?:-\d+)?$")
@@ -138,6 +147,42 @@ def _load_chat_config_raw() -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         return {}
     return {}
+
+
+def _inject_user_model_options(raw: dict[str, Any], username: str) -> dict[str, Any]:
+    merged = dict(raw)
+    configured = raw.get("modelOptions") if isinstance(raw.get("modelOptions"), list) else []
+    merged_options: list[Any] = list(configured)
+
+    normalized_username = (username or "").strip()
+    if normalized_username:
+        merged_options.extend(list_user_model_options(normalized_username, CHAT_SCOPE))
+
+    merged["modelOptions"] = merged_options
+    return merged
+
+
+def _resolve_data_file_path(raw_path: str) -> Path | None:
+    value = (raw_path or "").strip()
+    if not value:
+        return None
+
+    candidate = BASE_DIR / value.replace("\\", "/").lstrip("/")
+    try:
+        resolved = candidate.resolve()
+    except OSError:
+        return None
+
+    data_root = DATA_DIR.resolve()
+    try:
+        resolved.relative_to(data_root)
+    except ValueError:
+        return None
+
+    if not resolved.exists() or not resolved.is_file():
+        return None
+
+    return resolved
 
 
 def _normalize_model_options(raw: dict[str, Any]) -> list[ModelOption]:
@@ -421,11 +466,8 @@ def _get_session_username(request: Request) -> str:
     return value.strip() if isinstance(value, str) else ""
 
 
-def _get_user_records_dir(request: Request) -> Path:
-    username = _safe_username(_get_session_username(request))
-    directory = CHAT_DATA_DIR / username
-    directory.mkdir(parents=True, exist_ok=True)
-    return directory
+def _get_request_username(request: Request) -> str:
+    return _safe_username(_get_session_username(request))
 
 
 def _get_user_face_dir(request: Request) -> Path:
@@ -524,71 +566,9 @@ def _read_face_attachment(face_dir: Path, stem: str) -> dict[str, Any]:
     }
 
 
-def _list_record_names(records_dir: Path) -> list[str]:
-    if not records_dir.exists():
-        return []
-    names: list[str] = []
-    for entry in records_dir.iterdir():
-        if not entry.is_file() or entry.suffix.lower() != ".json":
-            continue
-        record_name = _safe_basename_to_record_name(entry.stem)
-        if record_name:
-            names.append(record_name)
-    names.sort(reverse=True)
-    return names
-
-
-def _build_unique_record_name(records_dir: Path) -> str:
+def _build_unique_record_name(username: str) -> str:
     base_name = _format_record_name()
-    existing = set(_list_record_names(records_dir))
-    if base_name not in existing:
-        return base_name
-    suffix = 1
-    while True:
-        suffix_text = _pad2(suffix) if suffix <= 99 else str(suffix)
-        candidate = f"{base_name}-{suffix_text}"
-        if candidate not in existing:
-            return candidate
-        suffix += 1
-
-
-def _read_record_messages(records_dir: Path, record_name: str) -> list[dict[str, str]]:
-    candidates = [
-        records_dir / f"{_record_name_to_safe_basename(record_name)}.json",
-        records_dir / f"{record_name}.json",
-    ]
-    for path in candidates:
-        if not path.exists():
-            continue
-        try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        messages = payload.get("messages") if isinstance(payload, dict) else None
-        if isinstance(messages, list):
-            result: list[dict[str, str]] = []
-            for item in messages:
-                if not isinstance(item, dict):
-                    continue
-                role = str(item.get("role") or "").strip()
-                content = str(item.get("content") or "")
-                if role in ("user", "assistant") and content.strip():
-                    result.append({"role": role, "content": content})
-            return result
-    raise FileNotFoundError("记录不存在")
-
-
-def _write_record(records_dir: Path, record_name: str, messages: list[dict[str, str]], owner: str) -> None:
-    file_path = records_dir / f"{_record_name_to_safe_basename(record_name)}.json"
-    payload = {
-        "recordName": record_name,
-        "owner": owner,
-        "updatedAt": datetime.now().isoformat(),
-        "messages": messages,
-    }
-    temp_path = file_path.with_suffix(".tmp")
-    temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    temp_path.replace(file_path)
+    return get_next_record_name(username, CHAT_SCOPE, base_name)
 
 
 def _is_ollama_endpoint(endpoint: str) -> bool:
@@ -678,8 +658,9 @@ def _resolve_ollama_model_name(api_endpoint: str, requested_model: str) -> str |
 
 
 @router.get("/api/chat/config")
-async def get_chat_config() -> JSONResponse:
-    raw = _load_chat_config_raw()
+async def get_chat_config(request: Request) -> JSONResponse:
+    username = _get_request_username(request)
+    raw = _inject_user_model_options(_load_chat_config_raw(), username)
     resolved, options = _resolve_option(raw, None)
 
     payload = {
@@ -713,11 +694,11 @@ async def chat_records_get(
     action: str = Query(default="list"),
     name: str = Query(default=""),
 ) -> JSONResponse:
-    records_dir = _get_user_records_dir(request)
+    username = _get_request_username(request)
 
     if action == "list":
         return JSONResponse(
-            content={"records": _list_record_names(records_dir)},
+            content={"records": list_conversation_records(username, CHAT_SCOPE)},
             headers={"Cache-Control": "no-store"},
         )
 
@@ -729,7 +710,7 @@ async def chat_records_get(
                 content={"error": "name 参数无效，格式应为 yy-mm-ddThh:mm"},
             )
         try:
-            messages = _read_record_messages(records_dir, record_name)
+            messages = get_conversation_messages(username, CHAT_SCOPE, record_name)
         except FileNotFoundError:
             return JSONResponse(status_code=404, content={"error": "记录不存在"})
         return JSONResponse(
@@ -746,11 +727,11 @@ async def chat_face_records_get(
     action: str = Query(default="list"),
     name: str = Query(default=""),
 ) -> Response:
-    face_dir = _get_user_face_dir(request)
+    username = _get_request_username(request)
 
     if action == "list":
         return JSONResponse(
-            content={"records": _list_face_record_stems(face_dir)},
+            content={"records": list_diagnosis_record_names(username, FACE_SCOPE)},
             headers={"Cache-Control": "no-store"},
         )
 
@@ -761,12 +742,20 @@ async def chat_face_records_get(
                 status_code=400,
                 content={"error": "name 参数无效，格式应为 face-yy-mm-ddThh-mm"},
             )
-        try:
-            attachment = _read_face_attachment(face_dir, record_stem)
-        except FileNotFoundError:
+        record = get_diagnosis_record(username, FACE_SCOPE, record_stem)
+        if not record:
             return JSONResponse(status_code=404, content={"error": "面诊记录不存在"})
-        except ValueError as exc:
-            return JSONResponse(status_code=400, content={"error": str(exc)})
+
+        payload = record.get("payload") if isinstance(record.get("payload"), dict) else {}
+        face_data = payload.get("faceData")
+        face_prompt = _extract_face_prompt(face_data)
+        image_path = str(payload.get("imagePath") or record.get("imagePath") or "")
+        attachment = {
+            "recordName": record_stem,
+            "faceData": face_data if face_data is not None else {},
+            "facePrompt": face_prompt,
+            "imagePath": image_path,
+        }
 
         return JSONResponse(
             content=attachment,
@@ -780,9 +769,14 @@ async def chat_face_records_get(
                 status_code=400,
                 content={"error": "name 参数无效，格式应为 face-yy-mm-ddThh-mm"},
             )
-        try:
-            _, image_path = _resolve_face_record_paths(face_dir, record_stem)
-        except FileNotFoundError:
+        record = get_diagnosis_record(username, FACE_SCOPE, record_stem)
+        if not record:
+            return JSONResponse(status_code=404, content={"error": "面诊图片不存在"})
+
+        payload = record.get("payload") if isinstance(record.get("payload"), dict) else {}
+        image_path_value = str(payload.get("imagePath") or record.get("imagePath") or "")
+        image_path = _resolve_data_file_path(image_path_value)
+        if not image_path:
             return JSONResponse(status_code=404, content={"error": "面诊图片不存在"})
 
         return FileResponse(
@@ -808,28 +802,33 @@ async def chat_records_put(request: Request, body: SaveBody) -> JSONResponse:
             content={"error": "recordName 参数无效，格式应为 yy-mm-ddThh:mm"},
         )
 
-    records_dir = _get_user_records_dir(request)
-    record_name = sanitized_record_name or _build_unique_record_name(records_dir)
-    owner = _safe_username(_get_session_username(request))
+    username = _get_request_username(request)
+    record_name = sanitized_record_name or _build_unique_record_name(username)
 
-    with _STORE_LOCK:
-        _write_record(records_dir, record_name, messages, owner)
+    save_conversation_record(
+        username=username,
+        scope=CHAT_SCOPE,
+        record_name=record_name,
+        messages=messages,
+        extra={"owner": username},
+    )
 
     return JSONResponse(
         content={
             "recordName": record_name,
-            "records": _list_record_names(records_dir),
+            "records": list_conversation_records(username, CHAT_SCOPE),
         },
         headers={"Cache-Control": "no-store"},
     )
 
 
 @router.post("/api/chat")
-async def chat_proxy(body: ChatBody) -> Response:
+async def chat_proxy(body: ChatBody, request: Request) -> Response:
     if not body.messages:
         return JSONResponse(status_code=400, content={"error": "messages 不能为空"})
 
-    raw = _load_chat_config_raw()
+    username = _get_request_username(request)
+    raw = _inject_user_model_options(_load_chat_config_raw(), username)
     resolved, _ = _resolve_option(raw, body.selectedOptionName)
 
     if resolved is None or not resolved.api_endpoint or not resolved.model:

@@ -57,24 +57,28 @@ if (requestCookie) {
     statusHeaders.Cookie = requestCookie;
 }
 
-try {
-    const statusResponse = await fetch(statusEndpoint, {
-        method: "GET",
-        credentials: "include",
-        headers: statusHeaders,
-    });
+const hasSessionCookie = /(?:^|;\s*)rd_session=/.test(requestCookie);
 
-    if (statusResponse.ok) {
-        const statusPayload = (await statusResponse.json()) as {
-            loggedIn?: unknown;
-        };
+if (hasSessionCookie) {
+    try {
+        const statusResponse = await fetch(statusEndpoint, {
+            method: "GET",
+            credentials: "include",
+            headers: statusHeaders,
+        });
 
-        if (statusPayload?.loggedIn === true) {
-            return Astro.redirect(userPagePath);
+        if (statusResponse.ok) {
+            const statusPayload = (await statusResponse.json()) as {
+                loggedIn?: unknown;
+            };
+
+            if (statusPayload?.loggedIn === true) {
+                return Astro.redirect(userPagePath);
+            }
         }
+    } catch {
+        // 状态接口异常时保持可访问登录页
     }
-} catch {
-    // 状态接口异常时保持可访问登录页
 }
 ---
 
@@ -430,7 +434,9 @@ try {
 
                 if (authSwitchBtn instanceof HTMLButtonElement) {
                     authSwitchBtn.textContent =
-                        activeMode === "login" ? "没有账号？立即注册" : "已有账号？立即登录";
+                        activeMode === "login"
+                            ? "没有账号？立即注册"
+                            : "已有账号？立即登录";
                 }
             }
 

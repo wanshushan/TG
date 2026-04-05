@@ -3,19 +3,17 @@ from __future__ import annotations
 import json
 import os
 import re
-from datetime import datetime
 from pathlib import Path
-from threading import Lock
 from typing import Any
 from urllib import error as url_error
 from urllib import request as url_request
+from storage.db import upsert_score
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 FACE_DIR = Path(__file__).resolve().parent
 FACE_SCORE_CONFIG_PATH = FACE_DIR / "api_socre.json"
 FACE_SCORE_PROMPT_PATH = FACE_DIR / "prompt_socre.md"
-FACE_SCORE_DATA_DIR = BASE_DIR / "data" / "face"
-_SCORE_LOCK = Lock()
+FACE_SCORE_SCOPE = "face"
 
 
 def _read_text_file(path: Path) -> str:
@@ -206,53 +204,11 @@ def append_face_socre(
 	score_source: str = "fallback",
 	time_text: str | None = None,
 ) -> None:
-	user_dir = FACE_SCORE_DATA_DIR / username
-	user_dir.mkdir(parents=True, exist_ok=True)
-	score_path = user_dir / "socre.json"
-	current_time = (time_text or datetime.now().isoformat()).strip()
-
-	with _SCORE_LOCK:
-		records: list[dict[str, Any]] = []
-		if score_path.exists():
-			try:
-				raw = json.loads(score_path.read_text(encoding="utf-8") or "{}")
-				if isinstance(raw, dict) and isinstance(raw.get("records"), list):
-					for item in raw["records"]:
-						if isinstance(item, dict):
-							records.append(dict(item))
-			except (OSError, json.JSONDecodeError):
-				records = []
-
-		replaced = False
-		for item in records:
-			if str(item.get("recordName") or "") == record_name:
-				item["time"] = current_time
-				item["score"] = int(score)
-				item["scoreSource"] = score_source
-				replaced = True
-				break
-
-		if not replaced:
-			records.append({
-				"time": current_time,
-				"recordName": record_name,
-				"score": int(score),
-				"scoreSource": score_source,
-			})
-
-		def sort_key(item: dict[str, Any]) -> tuple[int, str]:
-			text = str(item.get("time") or "")
-			try:
-				return (0, datetime.fromisoformat(text).isoformat())
-			except ValueError:
-				return (1, text)
-
-		records.sort(key=sort_key)
-
-		payload = {
-			"metric": "qixue",
-			"records": records,
-		}
-		temp_path = score_path.with_suffix(".tmp")
-		temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-		temp_path.replace(score_path)
+	upsert_score(
+		username=username,
+		scope=FACE_SCORE_SCOPE,
+		record_name=record_name,
+		score=int(score),
+		score_source=score_source,
+		score_time=(time_text or "").strip() or None,
+	)

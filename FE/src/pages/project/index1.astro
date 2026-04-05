@@ -1,0 +1,2514 @@
+---
+import BaseHead from "../../components/BaseHead.astro";
+import BackToTop from "../../components/BackToTop.astro";
+import Header from "../../components/Header.astro";
+import { siteConfig } from "../../config";
+---
+
+<!doctype html>
+<html lang={siteConfig.defaultLanguage} data-overlayscrollbars-initialize>
+    <head>
+        <BaseHead title="灵诊·问诊" description="AI 对话项目页" />
+        <style>
+            :global(html) {
+                scrollbar-width: thin;
+                scrollbar-color: rgba(var(--gray), 0.65)
+                    rgba(var(--gray-light), 0.6);
+            }
+            :global(html::-webkit-scrollbar),
+            :global(body::-webkit-scrollbar),
+            .messages::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            :global(html::-webkit-scrollbar-track),
+            :global(body::-webkit-scrollbar-track),
+            .messages::-webkit-scrollbar-track {
+                background: rgba(var(--gray-light), 0.6);
+            }
+            :global(html::-webkit-scrollbar-thumb),
+            :global(body::-webkit-scrollbar-thumb),
+            .messages::-webkit-scrollbar-thumb {
+                background: rgba(var(--gray), 0.65);
+                border-radius: 999px;
+            }
+            :global(html::-webkit-scrollbar-thumb:hover),
+            :global(body::-webkit-scrollbar-thumb:hover),
+            .messages::-webkit-scrollbar-thumb:hover {
+                background: rgba(var(--gray), 0.85);
+            }
+            :global(body) {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+            main.chat-page {
+                width: 100%;
+                max-width: none;
+                margin: 0;
+                padding: 0.8rem 0 8.6rem;
+                flex: 1;
+                min-height: 0;
+                display: flex;
+                --chat-radius: 0.95rem;
+                --chat-radius-sm: 0.8rem;
+            }
+            .chat-shell {
+                flex: 1;
+                width: calc(100% - 10px);
+                margin: 0 auto;
+                min-height: 0;
+                border: 1px solid rgba(var(--gray), 0.35);
+                border-radius: var(--chat-radius);
+                background: white;
+                display: grid;
+                grid-template-rows: auto minmax(0, 1fr) auto;
+                overflow: hidden;
+            }
+            .chat-topbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 1rem;
+                padding: 1rem 1.1rem;
+                border-bottom: 1px solid rgba(var(--gray), 0.35);
+                background: rgba(var(--gray-light), 0.75);
+            }
+            .topbar-left {
+                display: grid;
+                grid-template-rows: 2.4rem auto;
+                align-items: center;
+                justify-items: start;
+                row-gap: 0.35rem;
+            }
+            .topbar-right {
+                display: grid;
+                grid-template-rows: 2.4rem auto;
+                align-items: center;
+                justify-items: end;
+                row-gap: 0.35rem;
+                justify-content: flex-start;
+            }
+            .stream-toggle {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                padding: 0.25rem 0.55rem;
+                border-radius: 999px;
+                border: 1px solid rgba(var(--gray), 0.45);
+                background: white;
+                font-size: 0.8rem;
+                color: rgba(var(--gray-dark), 0.85);
+            }
+            .temp-control {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0.2rem 0.55rem;
+                border-radius: 999px;
+                border: 1px solid rgba(var(--gray), 0.45);
+                background: white;
+                font-size: 0.8rem;
+                color: rgba(var(--gray-dark), 0.85);
+            }
+            .temp-control input {
+                width: 4rem;
+                border: 0;
+                background: transparent;
+                color: rgb(var(--gray-dark));
+                font-size: 0.82rem;
+                line-height: 1.2;
+            }
+            .temp-control input:focus {
+                outline: none;
+            }
+            .chat-topbar h1 {
+                margin: 0;
+                font-size: 1.35rem;
+                line-height: 1.25;
+            }
+            .subtitle {
+                margin: 0.3rem 0 0;
+                font-size: 0.95rem;
+                color: rgba(var(--gray-dark), 0.82);
+            }
+            .status {
+                margin: 0;
+                padding: 0.35rem 0.75rem;
+                border-radius: 999px;
+                border: 1px solid rgba(var(--accent-rgb), 0.35);
+                background: rgba(var(--accent-rgb), 0.12);
+                font-size: 0.8rem;
+                line-height: 1.25;
+                color: var(--accent-dark);
+                white-space: nowrap;
+            }
+            .messages {
+                min-height: 0;
+                overflow-y: auto;
+                padding: 1rem 1rem 9rem;
+                background: rgba(var(--gray-light), 0.45);
+            }
+            .empty-state {
+                margin: 16vh auto 0;
+                max-width: 500px;
+                text-align: center;
+                border: 1px dashed rgba(var(--gray), 0.5);
+                border-radius: var(--chat-radius);
+                padding: 1rem 1.2rem;
+                background: rgb(var(--gray-light));
+            }
+            .empty-state h2 {
+                margin: 0 0 0.35rem;
+                font-size: 1.15rem;
+            }
+            .empty-state p {
+                margin: 0;
+                font-size: 0.95rem;
+                color: rgba(var(--gray-dark), 0.82);
+            }
+            :global(.message-row) {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.6rem;
+                width: calc(100% - 20px);
+                margin: 0 auto 0.85rem;
+            }
+            :global(.message-row.user) {
+                flex-direction: row-reverse;
+            }
+            :global(.avatar) {
+                width: 1.95rem;
+                height: 1.95rem;
+                border-radius: 999px;
+                border: 1px solid rgba(var(--gray), 0.45);
+                background: rgb(var(--gray-light));
+                color: rgb(var(--gray-dark));
+                font-size: 0.72rem;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            :global(.message-row.user .avatar) {
+                background: rgba(var(--accent-rgb), 0.15);
+                border-color: rgba(var(--accent-rgb), 0.35);
+                color: rgb(var(--accent-dark));
+            }
+            :global(.bubble) {
+                max-width: min(74%, 720px);
+                padding: 0.78rem 1rem;
+                border-radius: 1.08rem;
+                border: 1px solid rgba(var(--gray), 0.46);
+                background: white;
+                color: rgb(var(--gray-dark));
+                font-size: 0.95rem;
+                line-height: 1.55;
+                word-break: break-word;
+            }
+            :global(.message-row.ai .bubble) {
+                border-top-left-radius: 0.52rem;
+            }
+            :global(.bubble)
+                :where(h1, h2, h3, h4, h5, h6, p, ul, ol, blockquote, pre) {
+                margin: 0 0 0.72rem;
+            }
+            :global(.bubble) :where(h1, h2, h3, h4, h5, h6) {
+                line-height: 1.35;
+            }
+            :global(.bubble)
+                :where(
+                    p:last-child,
+                    ul:last-child,
+                    ol:last-child,
+                    blockquote:last-child,
+                    pre:last-child
+                ) {
+                margin-bottom: 0;
+            }
+            :global(.bubble) :where(ul, ol) {
+                padding-left: 1.2rem;
+            }
+            :global(.bubble) :where(pre) {
+                padding: 0.68rem 0.75rem;
+                overflow-x: auto;
+                border-radius: 0.62rem;
+                border: 1px solid rgba(var(--gray), 0.35);
+                background: rgba(var(--gray-light), 0.75);
+            }
+            :global(.bubble) :where(code) {
+                padding: 0.1rem 0.35rem;
+                border-radius: 0.4rem;
+                background: rgba(var(--gray-light), 0.85);
+            }
+            :global(.bubble) :where(pre code) {
+                padding: 0;
+                border-radius: 0;
+                background: transparent;
+            }
+            :global(.bubble) :where(a) {
+                color: var(--accent-dark);
+                text-decoration: underline;
+            }
+            :global(.message-row.user .bubble) {
+                background: var(--accent);
+                border-color: var(--accent-dark);
+                color: white;
+                border-radius: 1.08rem;
+                border-top-right-radius: 0.52rem;
+            }
+            :global(.message-row.user .bubble) :where(a) {
+                color: white;
+            }
+            :global(.message-row.user .bubble) :where(code) {
+                background: rgba(255, 255, 255, 0.18);
+                color: white;
+            }
+            :global(.message-row.user .bubble) :where(pre) {
+                border-color: rgba(255, 255, 255, 0.3);
+                background: rgba(0, 0, 0, 0.16);
+            }
+            .chat-form {
+                display: flex;
+                align-items: flex-end;
+                gap: 0.7rem;
+                position: fixed;
+                left: 50%;
+                bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px));
+                transform: translateX(-50%);
+                width: calc(100% - 10px);
+                z-index: 55;
+                padding: 0.85rem 1rem 1rem;
+                border-radius: var(--chat-radius);
+                border-top: 1px solid rgba(var(--gray), 0.35);
+                background: rgba(var(--gray-light), 0.75);
+                box-shadow: 0 10px 26px rgba(var(--black), 0.16);
+                backdrop-filter: blur(5px);
+            }
+            .chat-form textarea {
+                flex: 1;
+                margin: 0;
+                min-height: 2.9rem;
+                max-height: 10rem;
+                box-sizing: border-box;
+                padding: 0.72rem 0.8rem;
+                border: 1px solid rgba(var(--gray), 0.56);
+                border-radius: var(--chat-radius-sm);
+                background: white;
+                color: rgb(var(--gray-dark));
+                font-size: 0.95rem;
+                line-height: 1.45;
+                resize: none;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                scroll-behavior: smooth;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(var(--gray), 0.6)
+                    rgba(var(--gray-light), 0.55);
+            }
+            .chat-form textarea::-webkit-scrollbar {
+                width: 6px;
+            }
+            .chat-form textarea::-webkit-scrollbar-track {
+                background: rgba(var(--gray-light), 0.55);
+                border-radius: 999px;
+            }
+            .chat-form textarea::-webkit-scrollbar-thumb {
+                background: rgba(var(--gray), 0.6);
+                border-radius: 999px;
+            }
+            .chat-form textarea::-webkit-scrollbar-thumb:hover {
+                background: rgba(var(--gray), 0.8);
+            }
+            .chat-form textarea:focus {
+                outline: 2px solid rgba(var(--accent-rgb), 0.3);
+                border-color: rgba(var(--accent-rgb), 0.45);
+            }
+            .chat-form button {
+                height: 2.9rem;
+                padding: 0 1rem;
+                border: 1px solid var(--accent-dark);
+                border-radius: var(--chat-radius-sm);
+                background: var(--accent-dark);
+                color: white;
+                font-size: 0.95rem;
+                cursor: pointer;
+            }
+            .chat-form button:disabled {
+                opacity: 0.55;
+                cursor: not-allowed;
+            }
+            .model-modal-backdrop {
+                position: fixed;
+                inset: 0;
+                z-index: 70;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                padding: 1rem;
+                background: rgba(11, 18, 34, 0.45);
+                backdrop-filter: blur(2px);
+            }
+            .model-modal-backdrop.is-open {
+                display: flex;
+            }
+            .model-modal {
+                width: min(30rem, calc(100vw - 2rem));
+                border-radius: 1rem;
+                background: #fff;
+                padding: 1rem;
+                display: grid;
+                gap: 0.75rem;
+                box-shadow: 0 24px 48px rgba(var(--black), 0.2);
+            }
+            .model-modal h3 {
+                margin: 0;
+                font-size: 1.1rem;
+            }
+            .model-modal p {
+                margin: 0;
+                color: rgba(var(--gray-dark), 0.78);
+                font-size: 0.86rem;
+            }
+            .model-modal label {
+                display: grid;
+                gap: 0.3rem;
+                font-size: 0.84rem;
+                color: rgba(var(--gray-dark), 0.84);
+            }
+            .model-modal input {
+                height: 2.4rem;
+                border: 1px solid rgba(var(--gray), 0.42);
+                border-radius: 0.72rem;
+                padding: 0 0.7rem;
+                font-size: 0.9rem;
+                color: rgb(var(--gray-dark));
+                background: #fff;
+            }
+            .model-modal input:focus {
+                outline: none;
+                border-color: rgba(var(--accent-rgb), 0.55);
+                box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.18);
+            }
+            .model-modal-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 0.55rem;
+                margin-top: 0.15rem;
+            }
+            .model-modal-actions button {
+                border: none;
+                border-radius: 999px;
+                height: 2.2rem;
+                padding: 0 1rem;
+                font-size: 0.85rem;
+                cursor: pointer;
+            }
+            .model-modal-cancel {
+                background: rgba(var(--gray-light), 0.95);
+                color: rgb(var(--gray-dark));
+            }
+            .model-modal-submit {
+                background: var(--accent-dark);
+                color: #fff;
+            }
+            .chat-form-actions {
+                display: inline-flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.45rem;
+                width: 21rem;
+                flex-shrink: 0;
+            }
+            .attachment-row {
+                display: flex;
+                align-items: stretch;
+                gap: 0.45rem;
+            }
+            .attachment-row .attachment-picker {
+                flex: 1;
+                min-width: 0;
+            }
+            .attachment-picker {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.45rem;
+                padding: 0.2rem 0.35rem;
+                border-radius: var(--chat-radius-sm);
+                border: 1px solid rgba(var(--gray), 0.45);
+                background: white;
+            }
+            .attachment-picker > span {
+                font-size: 0.78rem;
+                line-height: 1;
+                color: rgba(var(--gray-dark), 0.8);
+            }
+            .attachment-picker .picker-trigger {
+                min-width: 0;
+                width: 100%;
+                max-width: none;
+                color: white;
+            }
+            .attachment-picker .picker-trigger-label {
+                color: white;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .attachment-picker .picker-trigger-icon {
+                color: white;
+                fill: currentColor;
+            }
+            .attachment-picker .picker-panel {
+                left: 0;
+                right: 0;
+                top: auto;
+                bottom: calc(100% + 0.4rem);
+                width: auto;
+                max-width: none;
+            }
+            .chat-shell,
+            .chat-topbar,
+            .history-picker,
+            .model-picker,
+            .attachment-picker,
+            .stream-toggle,
+            .temp-control,
+            .status,
+            .empty-state,
+            :global(.avatar),
+            :global(.bubble),
+            :global(.bubble) :where(pre),
+            .chat-form,
+            .chat-form textarea,
+            .chat-form button {
+                border: none !important;
+            }
+            .chat-form textarea:focus {
+                outline: none !important;
+            }
+            @media (max-width: 720px) {
+                main.chat-page {
+                    width: 100%;
+                    min-height: 0;
+                    padding: 0.55rem 0;
+                    --chat-radius: 0.85rem;
+                    --chat-radius-sm: 0.75rem;
+                }
+                .chat-shell {
+                    border-radius: var(--chat-radius);
+                }
+                .chat-topbar {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 0.55rem;
+                }
+                .topbar-right {
+                    width: 100%;
+                    justify-content: flex-start;
+                    justify-items: start;
+                }
+                .topbar-left {
+                    width: 100%;
+                }
+                .history-picker,
+                .model-picker {
+                    width: 100%;
+                    max-width: 100%;
+                    box-sizing: border-box;
+                }
+                .picker-trigger {
+                    flex: 1;
+                    min-width: 0;
+                    max-width: 100%;
+                }
+                .picker-panel {
+                    left: 0;
+                    right: 0;
+                    width: auto;
+                    max-width: 100%;
+                }
+                .status {
+                    white-space: normal;
+                }
+                :global(.bubble) {
+                    max-width: 90%;
+                }
+                .chat-form {
+                    padding: 0.75rem;
+                    flex-direction: column;
+                    align-items: stretch;
+                    bottom: calc(0.45rem + env(safe-area-inset-bottom, 0px));
+                    width: calc(100% - 8px);
+                }
+                .chat-form-actions {
+                    width: 100%;
+                }
+                .chat-form button {
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <Header />
+        <main class="chat-page">
+            <section class="chat-shell">
+                <div class="chat-topbar">
+                    <div class="topbar-left">
+                        <h1>灵诊·问诊</h1>
+                        <label
+                            class="history-picker picker-more"
+                            for="history-select"
+                            id="history-picker-root"
+                        >
+                            <span>问诊记录</span>
+                            <select
+                                id="history-select"
+                                class="picker-native"
+                                aria-label="选择问诊记录"></select>
+                            <button
+                                id="history-picker-trigger"
+                                class="picker-trigger"
+                                type="button"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                aria-controls="history-picker-panel"
+                            >
+                                <span
+                                    id="history-picker-label"
+                                    class="picker-trigger-label">当前会话</span
+                                >
+                                <svg
+                                    class="picker-trigger-icon"
+                                    viewBox="0 0 24 24"
+                                    width="14"
+                                    height="14"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M7 10l5 5 5-5z"></path>
+                                </svg>
+                            </button>
+                            <div
+                                id="history-picker-panel"
+                                class="picker-panel"
+                                role="listbox"
+                                aria-label="问诊记录选项"
+                            >
+                                <div
+                                    id="history-picker-options"
+                                    class="picker-options"
+                                >
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="topbar-right">
+                        <div id="status" class="status">
+                            正在读取 API 配置...
+                        </div>
+                        <label
+                            class="model-picker picker-more"
+                            for="model-select"
+                            id="model-picker-root"
+                        >
+                            <span>模型/API</span>
+                            <select
+                                id="model-select"
+                                class="picker-native"
+                                aria-label="选择模型"></select>
+                            <button
+                                id="model-picker-trigger"
+                                class="picker-trigger"
+                                type="button"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                aria-controls="model-picker-panel"
+                            >
+                                <span
+                                    id="model-picker-label"
+                                    class="picker-trigger-label">未选择</span
+                                >
+                                <svg
+                                    class="picker-trigger-icon"
+                                    viewBox="0 0 24 24"
+                                    width="14"
+                                    height="14"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M7 10l5 5 5-5z"></path>
+                                </svg>
+                            </button>
+                            <div
+                                id="model-picker-panel"
+                                class="picker-panel"
+                                role="listbox"
+                                aria-label="模型选项"
+                            >
+                                <div
+                                    id="model-picker-options"
+                                    class="picker-options"
+                                >
+                                </div>
+                            </div>
+                        </label>
+                        <!-- 流式开关前端显示 -->
+                        <!-- <label class="stream-toggle" for="stream-toggle">
+                            <input
+                                id="stream-toggle"
+                                type="checkbox"
+                                aria-label="是否流式输出"
+                            />
+                            流式
+                        </label>  -->
+                        <!-- 温度控制前端开关 -->
+                        <!-- <label class="temp-control" for="temperature-input">
+                            <span>温度</span>
+                            <input
+                                id="temperature-input"
+                                type="number"
+                                min="0"
+                                max="2"
+                                step="0.1"
+                                aria-label="temperature"
+                            />
+                        </label>  -->
+                    </div>
+                </div>
+                <section id="messages" class="messages" aria-live="polite">
+                    <div id="empty-state" class="empty-state">
+                        <h2>新问诊</h2>
+                        <p>-输入问题开始吧-</p>
+                        <p>
+                            （提示：如果需要使用面诊或舌诊数据，请先选择对应的附件）
+                        </p>
+                        <p>你可以描述症状，也可以上传附件分析身体情况</p>
+                    </div>
+                </section>
+                <form id="chat-form" class="chat-form">
+                    <textarea
+                        id="user-input"
+                        rows="1"
+                        placeholder="Enter 发送 , Shift+Enter 换行 , 选择附件以使用面部与舌头数据（可选）"
+                        required></textarea>
+                    <div class="chat-form-actions">
+                        <div class="attachment-row">
+                            <label
+                                class="attachment-picker picker-more"
+                                for="attachment-face-select"
+                                id="attachment-face-picker-root"
+                            >
+                                <span>面诊附件</span>
+                                <select
+                                    id="attachment-face-select"
+                                    class="picker-native"
+                                    aria-label="选择面诊附件"></select>
+                                <button
+                                    id="attachment-face-picker-trigger"
+                                    class="picker-trigger"
+                                    type="button"
+                                    aria-haspopup="listbox"
+                                    aria-expanded="false"
+                                    aria-controls="attachment-face-picker-panel"
+                                >
+                                    <span
+                                        id="attachment-face-picker-label"
+                                        class="picker-trigger-label"
+                                        >不附加</span
+                                    >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="18"
+                                        height="22"
+                                        viewBox="0 0 448 512"
+                                        ><!-- Icon from Font Awesome 6 Regular by Dave Gandy - https://creativecommons.org/licenses/by/4.0/ -->
+                                        <path
+                                            fill="currentColor"
+                                            d="M384 336H192c-8.8 0-16-7.2-16-16V64c0-8.8 7.2-16 16-16h140.1l67.9 67.9V320c0 8.8-7.2 16-16 16m-192 48h192c35.3 0 64-28.7 64-64V115.9c0-12.7-5.1-24.9-14.1-33.9l-67.8-67.9c-9-9-21.2-14.1-33.9-14.1H192c-35.3 0-64 28.7-64 64v256c0 35.3 28.7 64 64 64M64 128c-35.3 0-64 28.7-64 64v256c0 35.3 28.7 64 64 64h192c35.3 0 64-28.7 64-64v-32h-48v32c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V192c0-8.8 7.2-16 16-16h32v-48z"
+                                        ></path></svg
+                                    >
+                                </button>
+                                <div
+                                    id="attachment-face-picker-panel"
+                                    class="picker-panel"
+                                    role="listbox"
+                                    aria-label="面诊附件选项"
+                                >
+                                    <div
+                                        id="attachment-face-picker-options"
+                                        class="picker-options"
+                                    >
+                                    </div>
+                                </div>
+                            </label>
+                            <label
+                                class="attachment-picker picker-more"
+                                for="attachment-tg-select"
+                                id="attachment-tg-picker-root"
+                            >
+                                <span>舌诊附件</span>
+                                <select
+                                    id="attachment-tg-select"
+                                    class="picker-native"
+                                    aria-label="选择舌诊附件"></select>
+                                <button
+                                    id="attachment-tg-picker-trigger"
+                                    class="picker-trigger"
+                                    type="button"
+                                    aria-haspopup="listbox"
+                                    aria-expanded="false"
+                                    aria-controls="attachment-tg-picker-panel"
+                                >
+                                    <span
+                                        id="attachment-tg-picker-label"
+                                        class="picker-trigger-label"
+                                        >不附加</span
+                                    >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="18"
+                                        height="22"
+                                        viewBox="0 0 448 512"
+                                        ><!-- Icon from Font Awesome 6 Regular by Dave Gandy - https://creativecommons.org/licenses/by/4.0/ -->
+                                        <path
+                                            fill="currentColor"
+                                            d="M384 336H192c-8.8 0-16-7.2-16-16V64c0-8.8 7.2-16 16-16h140.1l67.9 67.9V320c0 8.8-7.2 16-16 16m-192 48h192c35.3 0 64-28.7 64-64V115.9c0-12.7-5.1-24.9-14.1-33.9l-67.8-67.9c-9-9-21.2-14.1-33.9-14.1H192c-35.3 0-64 28.7-64 64v256c0 35.3 28.7 64 64 64M64 128c-35.3 0-64 28.7-64 64v256c0 35.3 28.7 64 64 64h192c35.3 0 64-28.7 64-64v-32h-48v32c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V192c0-8.8 7.2-16 16-16h32v-48z"
+                                        ></path></svg
+                                    >
+                                </button>
+                                <div
+                                    id="attachment-tg-picker-panel"
+                                    class="picker-panel"
+                                    role="listbox"
+                                    aria-label="舌诊附件选项"
+                                >
+                                    <div
+                                        id="attachment-tg-picker-options"
+                                        class="picker-options"
+                                    >
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        <button id="send-btn" type="submit">发送</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+        <div style="--back-to-top-extra-offset: 132px;">
+            <BackToTop />
+        </div>
+
+        <div
+            id="model-modal-backdrop"
+            class="model-modal-backdrop"
+            aria-hidden="true"
+        >
+            <form id="model-modal" class="model-modal" novalidate>
+                <h3>添加模型</h3>
+                <p>填写后将保存到你的账号，可在问诊模型列表中直接使用。</p>
+                <label>
+                    自定义名称
+                    <input
+                        id="model-name-input"
+                        type="text"
+                        maxlength="80"
+                        required
+                        placeholder="例如：我的 GPT-4o"
+                    />
+                </label>
+                <label>
+                    实际模型名
+                    <input
+                        id="model-id-input"
+                        type="text"
+                        maxlength="120"
+                        required
+                        placeholder="例如：openai/gpt-4o"
+                    />
+                </label>
+                <label>
+                    API Key
+                    <input
+                        id="model-apikey-input"
+                        type="password"
+                        maxlength="240"
+                        required
+                        placeholder="输入你的密钥"
+                    />
+                </label>
+                <label>
+                    API Endpoint
+                    <input
+                        id="model-endpoint-input"
+                        type="url"
+                        maxlength="300"
+                        required
+                        placeholder="https://example.com/v1/chat/completions"
+                    />
+                </label>
+                <div class="model-modal-actions">
+                    <button
+                        id="model-modal-cancel"
+                        class="model-modal-cancel"
+                        type="button">取消</button
+                    >
+                    <button
+                        id="model-modal-submit"
+                        class="model-modal-submit"
+                        type="submit">保存</button
+                    >
+                </div>
+            </form>
+        </div>
+
+        <script>
+            import { marked } from "marked";
+            import DOMPurify from "dompurify";
+
+            const statusEl = document.querySelector(
+                "#status",
+            ) as HTMLDivElement | null;
+            const messagesEl = document.querySelector(
+                "#messages",
+            ) as HTMLElement | null;
+            const emptyStateEl = document.querySelector(
+                "#empty-state",
+            ) as HTMLDivElement | null;
+            const formEl = document.querySelector(
+                "#chat-form",
+            ) as HTMLFormElement | null;
+            const chatFormActionsEl = document.querySelector(
+                ".chat-form-actions",
+            ) as HTMLDivElement | null;
+            const inputEl = document.querySelector(
+                "#user-input",
+            ) as HTMLTextAreaElement | null;
+            const sendBtn = document.querySelector(
+                "#send-btn",
+            ) as HTMLButtonElement | null;
+            const modelSelectEl = document.querySelector(
+                "#model-select",
+            ) as HTMLSelectElement | null;
+            const historySelectEl = document.querySelector(
+                "#history-select",
+            ) as HTMLSelectElement | null;
+            const historyPickerRootEl = document.querySelector(
+                "#history-picker-root",
+            ) as HTMLLabelElement | null;
+            const historyPickerTriggerEl = document.querySelector(
+                "#history-picker-trigger",
+            ) as HTMLButtonElement | null;
+            const historyPickerLabelEl = document.querySelector(
+                "#history-picker-label",
+            ) as HTMLSpanElement | null;
+            const historyPickerPanelEl = document.querySelector(
+                "#history-picker-panel",
+            ) as HTMLDivElement | null;
+            const historyPickerOptionsEl = document.querySelector(
+                "#history-picker-options",
+            ) as HTMLDivElement | null;
+            const streamToggleEl = document.querySelector(
+                "#stream-toggle",
+            ) as HTMLInputElement | null;
+            const temperatureInputEl = document.querySelector(
+                "#temperature-input",
+            ) as HTMLInputElement | null;
+            const modelPickerRootEl = document.querySelector(
+                "#model-picker-root",
+            ) as HTMLLabelElement | null;
+            const modelPickerTriggerEl = document.querySelector(
+                "#model-picker-trigger",
+            ) as HTMLButtonElement | null;
+            const modelPickerLabelEl = document.querySelector(
+                "#model-picker-label",
+            ) as HTMLSpanElement | null;
+            const modelPickerPanelEl = document.querySelector(
+                "#model-picker-panel",
+            ) as HTMLDivElement | null;
+            const modelPickerOptionsEl = document.querySelector(
+                "#model-picker-options",
+            ) as HTMLDivElement | null;
+            const attachmentFaceSelectEl = document.querySelector(
+                "#attachment-face-select",
+            ) as HTMLSelectElement | null;
+            const attachmentFacePickerRootEl = document.querySelector(
+                "#attachment-face-picker-root",
+            ) as HTMLLabelElement | null;
+            const attachmentFacePickerTriggerEl = document.querySelector(
+                "#attachment-face-picker-trigger",
+            ) as HTMLButtonElement | null;
+            const attachmentFacePickerLabelEl = document.querySelector(
+                "#attachment-face-picker-label",
+            ) as HTMLSpanElement | null;
+            const attachmentFacePickerPanelEl = document.querySelector(
+                "#attachment-face-picker-panel",
+            ) as HTMLDivElement | null;
+            const attachmentFacePickerOptionsEl = document.querySelector(
+                "#attachment-face-picker-options",
+            ) as HTMLDivElement | null;
+            const attachmentTgSelectEl = document.querySelector(
+                "#attachment-tg-select",
+            ) as HTMLSelectElement | null;
+            const attachmentTgPickerRootEl = document.querySelector(
+                "#attachment-tg-picker-root",
+            ) as HTMLLabelElement | null;
+            const attachmentTgPickerTriggerEl = document.querySelector(
+                "#attachment-tg-picker-trigger",
+            ) as HTMLButtonElement | null;
+            const attachmentTgPickerLabelEl = document.querySelector(
+                "#attachment-tg-picker-label",
+            ) as HTMLSpanElement | null;
+            const attachmentTgPickerPanelEl = document.querySelector(
+                "#attachment-tg-picker-panel",
+            ) as HTMLDivElement | null;
+            const attachmentTgPickerOptionsEl = document.querySelector(
+                "#attachment-tg-picker-options",
+            ) as HTMLDivElement | null;
+            const modelModalBackdropEl = document.querySelector(
+                "#model-modal-backdrop",
+            ) as HTMLDivElement | null;
+            const modelModalEl = document.querySelector(
+                "#model-modal",
+            ) as HTMLFormElement | null;
+            const modelNameInputEl = document.querySelector(
+                "#model-name-input",
+            ) as HTMLInputElement | null;
+            const modelIdInputEl = document.querySelector(
+                "#model-id-input",
+            ) as HTMLInputElement | null;
+            const modelApiKeyInputEl = document.querySelector(
+                "#model-apikey-input",
+            ) as HTMLInputElement | null;
+            const modelEndpointInputEl = document.querySelector(
+                "#model-endpoint-input",
+            ) as HTMLInputElement | null;
+            const modelModalCancelEl = document.querySelector(
+                "#model-modal-cancel",
+            ) as HTMLButtonElement | null;
+            const configUrl = "/api/chat/config";
+            const chatProxyUrl = "/api/chat";
+            const faceAttachmentUrl = "/api/chat/face";
+            const tgAttachmentUrl = "/api/tg/history";
+            const addModelUrl = "/api/user/model-options";
+            const ADD_MODEL_VALUE = "__add_model__";
+            let apiEndpoint = "";
+            let model = "llama3.2";
+            let selectedOptionName = "";
+            let currentRecordName = "";
+            type ModelOptionConfig = {
+                name: string;
+                model: string;
+                apiEndpoint: string;
+                systemPrompt: string;
+                stream: boolean;
+                temperature: number | null;
+            };
+            type ChatHistoryMessage = {
+                role: "user" | "assistant";
+                content: string;
+            };
+            let modelOptions: ModelOptionConfig[] = [];
+            let recordNames: string[] = [];
+            let systemPrompt = "";
+            let useStream = false;
+            let currentTemperature: number | null = null;
+            const chatHistory: ChatHistoryMessage[] = [];
+            let syncModelPickerMenu = () => {};
+            let syncHistoryPickerMenu = () => {};
+            let syncFaceAttachmentPickerMenu = () => {};
+            let syncTgAttachmentPickerMenu = () => {};
+            let faceAttachmentRecords: string[] = [];
+            let selectedFaceAttachmentName = "";
+            let selectedFacePrompt = "";
+            let tgAttachmentRecords: string[] = [];
+            let selectedTgAttachmentName = "";
+            let selectedTgPrompt = "";
+
+            function closeAddModelModal() {
+                if (!modelModalBackdropEl) {
+                    return;
+                }
+                modelModalBackdropEl.classList.remove("is-open");
+                modelModalBackdropEl.setAttribute("aria-hidden", "true");
+            }
+
+            function openAddModelModal() {
+                if (!modelModalBackdropEl) {
+                    return;
+                }
+                modelModalBackdropEl.classList.add("is-open");
+                modelModalBackdropEl.setAttribute("aria-hidden", "false");
+                modelNameInputEl?.focus();
+            }
+
+            async function submitAddModel() {
+                const name = modelNameInputEl?.value.trim() || "";
+                const modelId = modelIdInputEl?.value.trim() || "";
+                const apiKey = modelApiKeyInputEl?.value.trim() || "";
+                const apiEndpoint = modelEndpointInputEl?.value.trim() || "";
+
+                if (!name || !modelId || !apiKey || !apiEndpoint) {
+                    setStatus(
+                        "请完整填写自定义名称、实际模型名、API Key 和 API Endpoint",
+                    );
+                    return;
+                }
+
+                const response = await fetch(addModelUrl, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: "application/json",
+                    },
+                    body: JSON.stringify({
+                        scope: "chat",
+                        name,
+                        model: modelId,
+                        apiEndpoint,
+                        apiKey,
+                        stream: true,
+                    }),
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                const message =
+                    payload && typeof payload.message === "string"
+                        ? payload.message
+                        : "保存模型失败";
+
+                if (!response.ok) {
+                    throw new Error(message);
+                }
+
+                await loadApiConfig();
+                selectedOptionName = name;
+                applySelectedOption(name);
+                if (modelSelectEl) {
+                    modelSelectEl.value = name;
+                }
+                syncModelPickerMenu();
+
+                if (modelNameInputEl) {
+                    modelNameInputEl.value = "";
+                }
+                if (modelIdInputEl) {
+                    modelIdInputEl.value = "";
+                }
+                if (modelApiKeyInputEl) {
+                    modelApiKeyInputEl.value = "";
+                }
+                if (modelEndpointInputEl) {
+                    modelEndpointInputEl.value = "";
+                }
+
+                closeAddModelModal();
+                setStatus(`已添加并切换模型：${name}`);
+            }
+
+            function normalizeTemperature(value: unknown): number | null {
+                if (typeof value === "number" && Number.isFinite(value)) {
+                    return Math.max(0, Math.min(2, value));
+                }
+                if (typeof value === "string") {
+                    const text = value.trim();
+                    if (!text) {
+                        return null;
+                    }
+                    const parsed = Number(text);
+                    if (Number.isFinite(parsed)) {
+                        return Math.max(0, Math.min(2, parsed));
+                    }
+                }
+                return null;
+            }
+
+            function normalizeModelOptions(
+                options: Array<
+                    | string
+                    | {
+                          name?: string;
+                          label?: string;
+                          model?: string;
+                          apiEndpoint?: string;
+                          systemPrompt?: string;
+                          stream?: boolean;
+                          temperature?: number;
+                      }
+                >,
+                fallback: {
+                    apiEndpoint: string;
+                    model: string;
+                    systemPrompt: string;
+                    stream: boolean;
+                    temperature: number | null;
+                },
+            ): ModelOptionConfig[] {
+                const normalized: ModelOptionConfig[] = [];
+
+                for (const option of options) {
+                    if (typeof option === "string") {
+                        const value = option.trim();
+                        if (!value) {
+                            continue;
+                        }
+                        normalized.push({
+                            name: value,
+                            model: value,
+                            apiEndpoint: fallback.apiEndpoint,
+                            systemPrompt: fallback.systemPrompt,
+                            stream: fallback.stream,
+                            temperature: fallback.temperature,
+                        });
+                        continue;
+                    }
+
+                    if (!option || typeof option !== "object") {
+                        continue;
+                    }
+
+                    const optionModel = (option.model || "").trim();
+                    const optionName = (
+                        option.name ||
+                        option.label ||
+                        optionModel
+                    ).trim();
+                    const optionEndpoint = (
+                        option.apiEndpoint || fallback.apiEndpoint
+                    ).trim();
+
+                    if (!optionName || !optionModel || !optionEndpoint) {
+                        continue;
+                    }
+
+                    normalized.push({
+                        name: optionName,
+                        model: optionModel,
+                        apiEndpoint: optionEndpoint,
+                        systemPrompt: (
+                            option.systemPrompt ?? fallback.systemPrompt
+                        ).trim(),
+                        stream:
+                            typeof option.stream === "boolean"
+                                ? option.stream
+                                : fallback.stream,
+                        temperature: normalizeTemperature(
+                            option.temperature ?? fallback.temperature,
+                        ),
+                    });
+                }
+
+                const dedup = new Map<string, ModelOptionConfig>();
+                for (const item of normalized) {
+                    if (!dedup.has(item.name)) {
+                        dedup.set(item.name, item);
+                    }
+                }
+
+                const result = Array.from(dedup.values());
+                if (
+                    result.length === 0 &&
+                    fallback.model &&
+                    fallback.apiEndpoint
+                ) {
+                    result.push({
+                        name: fallback.model,
+                        model: fallback.model,
+                        apiEndpoint: fallback.apiEndpoint,
+                        systemPrompt: fallback.systemPrompt,
+                        stream: fallback.stream,
+                        temperature: fallback.temperature,
+                    });
+                }
+
+                return result;
+            }
+
+            function normalizeApiEndpoint(endpoint: string): string {
+                const trimmed = endpoint.trim();
+                if (/^https:\/\/api\.deepseek\.com\/?$/i.test(trimmed)) {
+                    return "https://api.deepseek.com/chat/completions";
+                }
+                return trimmed;
+            }
+
+            function applySelectedOption(optionName: string) {
+                const selected = modelOptions.find(
+                    (option) => option.name === optionName,
+                );
+                if (!selected) {
+                    return;
+                }
+                selectedOptionName = selected.name;
+                apiEndpoint = normalizeApiEndpoint(selected.apiEndpoint);
+                model = selected.model;
+                systemPrompt = selected.systemPrompt;
+                useStream = selected.stream;
+                currentTemperature = normalizeTemperature(selected.temperature);
+
+                if (streamToggleEl) {
+                    streamToggleEl.checked = useStream;
+                }
+                if (temperatureInputEl) {
+                    temperatureInputEl.value =
+                        currentTemperature === null
+                            ? ""
+                            : String(currentTemperature);
+                }
+
+                if (
+                    modelSelectEl &&
+                    modelSelectEl.value !== selectedOptionName
+                ) {
+                    modelSelectEl.value = selectedOptionName;
+                }
+            }
+
+            function renderModelOptions() {
+                if (!modelSelectEl) {
+                    return;
+                }
+                modelSelectEl.innerHTML = "";
+                for (const option of modelOptions) {
+                    const optionEl = document.createElement("option");
+                    optionEl.value = option.name;
+                    optionEl.textContent = option.name;
+                    modelSelectEl.appendChild(optionEl);
+                }
+
+                const addOptionEl = document.createElement("option");
+                addOptionEl.value = ADD_MODEL_VALUE;
+                addOptionEl.textContent = "+ 添加模型";
+                modelSelectEl.appendChild(addOptionEl);
+
+                if (selectedOptionName) {
+                    modelSelectEl.value = selectedOptionName;
+                }
+                syncModelPickerMenu();
+            }
+
+            function setStatus(text: string) {
+                if (statusEl) {
+                    statusEl.textContent = text;
+                }
+            }
+
+            function setupPickerMenu(args: {
+                rootEl: HTMLElement | null;
+                selectEl: HTMLSelectElement | null;
+                triggerEl: HTMLButtonElement | null;
+                labelEl: HTMLSpanElement | null;
+                panelEl: HTMLDivElement | null;
+                optionsEl: HTMLDivElement | null;
+                emptyLabel: string;
+            }): () => void {
+                const {
+                    rootEl,
+                    selectEl,
+                    triggerEl,
+                    labelEl,
+                    panelEl,
+                    optionsEl,
+                    emptyLabel,
+                } = args;
+
+                if (
+                    !rootEl ||
+                    !selectEl ||
+                    !triggerEl ||
+                    !labelEl ||
+                    !panelEl ||
+                    !optionsEl
+                ) {
+                    return () => {};
+                }
+
+                const closePanel = () => {
+                    panelEl.classList.remove("is-open");
+                    triggerEl.setAttribute("aria-expanded", "false");
+                    panelEl.style.transform = "translateX(0)";
+                };
+
+                const adjustPanelPosition = () => {
+                    panelEl.style.transform = "translateX(0)";
+                    const viewportGap = 8;
+                    const rect = panelEl.getBoundingClientRect();
+                    let offsetX = 0;
+
+                    if (rect.right > window.innerWidth - viewportGap) {
+                        offsetX = window.innerWidth - viewportGap - rect.right;
+                    }
+                    if (rect.left + offsetX < viewportGap) {
+                        offsetX += viewportGap - (rect.left + offsetX);
+                    }
+
+                    if (offsetX !== 0) {
+                        panelEl.style.transform = `translateX(${offsetX}px)`;
+                    }
+                };
+
+                const renderOptions = () => {
+                    const selectOptions = Array.from(selectEl.options);
+                    const selectedOption =
+                        selectOptions.find(
+                            (option) => option.value === selectEl.value,
+                        ) || selectOptions[0];
+
+                    labelEl.textContent =
+                        selectedOption?.textContent?.trim() || emptyLabel;
+                    optionsEl.innerHTML = "";
+
+                    for (const option of selectOptions) {
+                        const optionButton = document.createElement("button");
+                        optionButton.type = "button";
+                        optionButton.className = "picker-option";
+                        optionButton.textContent = option.textContent || "";
+                        optionButton.setAttribute("role", "option");
+                        const isSelected = option.value === selectEl.value;
+                        optionButton.setAttribute(
+                            "aria-selected",
+                            isSelected ? "true" : "false",
+                        );
+
+                        if (isSelected) {
+                            optionButton.classList.add("is-selected");
+                        }
+
+                        optionButton.addEventListener("click", () => {
+                            if (selectEl.value !== option.value) {
+                                selectEl.value = option.value;
+                                selectEl.dispatchEvent(new Event("change"));
+                            }
+                            closePanel();
+                        });
+
+                        optionsEl.appendChild(optionButton);
+                    }
+                };
+
+                if (rootEl.dataset.pickerInitialized !== "true") {
+                    triggerEl.addEventListener("click", (event) => {
+                        event.stopPropagation();
+                        const nextOpen = !panelEl.classList.contains("is-open");
+                        panelEl.classList.toggle("is-open", nextOpen);
+                        triggerEl.setAttribute(
+                            "aria-expanded",
+                            nextOpen ? "true" : "false",
+                        );
+
+                        if (nextOpen) {
+                            requestAnimationFrame(adjustPanelPosition);
+                        }
+                    });
+
+                    document.addEventListener("click", (event) => {
+                        const target = event.target;
+                        if (!(target instanceof Node)) {
+                            return;
+                        }
+                        if (!rootEl.contains(target)) {
+                            closePanel();
+                        }
+                    });
+
+                    document.addEventListener("keydown", (event) => {
+                        if (event.key === "Escape") {
+                            closePanel();
+                        }
+                    });
+
+                    window.addEventListener("resize", () => {
+                        if (panelEl.classList.contains("is-open")) {
+                            adjustPanelPosition();
+                        }
+                    });
+
+                    selectEl.addEventListener("change", renderOptions);
+                    rootEl.dataset.pickerInitialized = "true";
+                }
+
+                renderOptions();
+                return renderOptions;
+            }
+
+            function autoResizeInput() {
+                if (!inputEl) {
+                    return;
+                }
+                const actionsHeight = chatFormActionsEl?.offsetHeight ?? 0;
+                inputEl.style.height = `${actionsHeight > 0 ? actionsHeight : 46}px`;
+                inputEl.scrollTop = inputEl.scrollHeight;
+            }
+
+            function getErrorMessage(error: unknown): string {
+                if (error instanceof Error) {
+                    return error.message;
+                }
+                return String(error);
+            }
+
+            function renderMarkdownToHtml(markdownText: string): string {
+                const rendered = marked.parse(markdownText, {
+                    gfm: true,
+                    breaks: true,
+                }) as string;
+                return DOMPurify.sanitize(rendered);
+            }
+
+            function extractModelNotFound(message: string): string | null {
+                const match = message.match(/model '([^']+)' not found/i);
+                return match?.[1] ?? null;
+            }
+
+            function isLocalOllamaEndpoint(endpoint: string): boolean {
+                return (
+                    endpoint.includes("127.0.0.1:11434") ||
+                    endpoint.includes("localhost:11434")
+                );
+            }
+
+            async function ensureLocalOllamaModelReady(): Promise<boolean> {
+                if (!isLocalOllamaEndpoint(apiEndpoint)) {
+                    return true;
+                }
+                try {
+                    const versionResponse = await fetch(
+                        "http://127.0.0.1:11434/api/version",
+                        {
+                            cache: "no-store",
+                        },
+                    );
+                    if (!versionResponse.ok) {
+                        throw new Error(`HTTP ${versionResponse.status}`);
+                    }
+
+                    return true;
+                } catch (error) {
+                    setStatus(
+                        `无法连接 Ollama 服务，将继续尝试请求：${getErrorMessage(error)}`,
+                    );
+                    return true;
+                }
+            }
+
+            function appendMessage(
+                role: "user" | "ai",
+                text: string,
+            ): HTMLDivElement | null {
+                if (!messagesEl) {
+                    return null;
+                }
+                if (emptyStateEl) {
+                    emptyStateEl.style.display = "none";
+                }
+                const row = document.createElement("article");
+                row.className = `message-row ${role}`;
+
+                const avatar = document.createElement("div");
+                avatar.className = "avatar";
+                avatar.textContent = role === "user" ? "你" : "AI";
+
+                const bubble = document.createElement("div");
+                bubble.className = "bubble";
+                bubble.innerHTML = renderMarkdownToHtml(text);
+
+                row.append(avatar, bubble);
+                messagesEl.appendChild(row);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+                return bubble;
+            }
+
+            function updateBubbleContent(
+                bubble: HTMLDivElement | null,
+                text: string,
+            ) {
+                if (!bubble) {
+                    return;
+                }
+                bubble.innerHTML = renderMarkdownToHtml(text);
+                if (messagesEl) {
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                }
+            }
+
+            async function readPlainTextStream(
+                response: Response,
+                bubble: HTMLDivElement | null,
+            ): Promise<string> {
+                if (!response.body) {
+                    const text = await response.text();
+                    updateBubbleContent(bubble, text);
+                    return text;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        break;
+                    }
+                    if (!value) {
+                        continue;
+                    }
+                    const chunkText = decoder.decode(value, { stream: true });
+                    if (!chunkText) {
+                        continue;
+                    }
+                    fullText += chunkText;
+                    updateBubbleContent(bubble, fullText);
+                }
+
+                const tail = decoder.decode();
+                if (tail) {
+                    fullText += tail;
+                    updateBubbleContent(bubble, fullText);
+                }
+
+                return fullText;
+            }
+
+            function clearMessages() {
+                if (!messagesEl) {
+                    return;
+                }
+                messagesEl
+                    .querySelectorAll(".message-row")
+                    .forEach((messageNode) => messageNode.remove());
+                if (emptyStateEl) {
+                    emptyStateEl.style.display = "";
+                }
+            }
+
+            function renderConversation(messages: ChatHistoryMessage[]) {
+                clearMessages();
+                for (const message of messages) {
+                    appendMessage(
+                        message.role === "assistant" ? "ai" : "user",
+                        message.content,
+                    );
+                }
+            }
+
+            function sortRecordNames(names: string[]): string[] {
+                return [...names].sort((a, b) =>
+                    a === b ? 0 : a > b ? -1 : 1,
+                );
+            }
+
+            function renderHistoryOptions() {
+                if (!historySelectEl) {
+                    return;
+                }
+                historySelectEl.innerHTML = "";
+
+                const currentSessionOption = document.createElement("option");
+                currentSessionOption.value = "";
+                currentSessionOption.textContent = "当前会话";
+                historySelectEl.appendChild(currentSessionOption);
+
+                for (const recordName of recordNames) {
+                    const optionEl = document.createElement("option");
+                    optionEl.value = recordName;
+                    optionEl.textContent = recordName;
+                    historySelectEl.appendChild(optionEl);
+                }
+
+                if (
+                    currentRecordName &&
+                    recordNames.includes(currentRecordName)
+                ) {
+                    historySelectEl.value = currentRecordName;
+                } else {
+                    historySelectEl.value = "";
+                }
+                syncHistoryPickerMenu();
+            }
+
+            function renderFaceAttachmentOptions() {
+                if (!attachmentFaceSelectEl) {
+                    return;
+                }
+
+                attachmentFaceSelectEl.innerHTML = "";
+
+                const noneOption = document.createElement("option");
+                noneOption.value = "";
+                noneOption.textContent = "不附加";
+                attachmentFaceSelectEl.appendChild(noneOption);
+
+                for (const recordName of faceAttachmentRecords) {
+                    const optionEl = document.createElement("option");
+                    optionEl.value = recordName;
+                    optionEl.textContent = recordName;
+                    attachmentFaceSelectEl.appendChild(optionEl);
+                }
+
+                attachmentFaceSelectEl.value =
+                    selectedFaceAttachmentName &&
+                    faceAttachmentRecords.includes(selectedFaceAttachmentName)
+                        ? selectedFaceAttachmentName
+                        : "";
+                syncFaceAttachmentPickerMenu();
+            }
+
+            function renderTgAttachmentOptions() {
+                if (!attachmentTgSelectEl) {
+                    return;
+                }
+
+                attachmentTgSelectEl.innerHTML = "";
+
+                const noneOption = document.createElement("option");
+                noneOption.value = "";
+                noneOption.textContent = "不附加";
+                attachmentTgSelectEl.appendChild(noneOption);
+
+                for (const recordName of tgAttachmentRecords) {
+                    const optionEl = document.createElement("option");
+                    optionEl.value = recordName;
+                    optionEl.textContent = recordName;
+                    attachmentTgSelectEl.appendChild(optionEl);
+                }
+
+                attachmentTgSelectEl.value =
+                    selectedTgAttachmentName &&
+                    tgAttachmentRecords.includes(selectedTgAttachmentName)
+                        ? selectedTgAttachmentName
+                        : "";
+                syncTgAttachmentPickerMenu();
+            }
+
+            async function fetchFaceAttachmentList() {
+                const response = await fetch(
+                    `${faceAttachmentUrl}?action=list`,
+                    {
+                        cache: "no-store",
+                        credentials: "include",
+                    },
+                );
+                if (!response.ok) {
+                    throw new Error(
+                        `读取附件列表失败：HTTP ${response.status}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    records?: unknown;
+                };
+                const records = Array.isArray(payload.records)
+                    ? payload.records
+                          .filter(
+                              (value): value is string =>
+                                  typeof value === "string",
+                          )
+                          .map((value) => value.trim())
+                          .filter((value) => value.length > 0)
+                    : [];
+
+                faceAttachmentRecords = sortRecordNames(records);
+                renderFaceAttachmentOptions();
+            }
+
+            async function fetchTgAttachmentList() {
+                const response = await fetch(`${tgAttachmentUrl}?action=list`, {
+                    cache: "no-store",
+                    credentials: "include",
+                });
+                if (!response.ok) {
+                    throw new Error(
+                        `读取舌诊附件列表失败：HTTP ${response.status}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    records?: unknown;
+                };
+                const records = Array.isArray(payload.records)
+                    ? payload.records
+                          .filter(
+                              (value): value is string =>
+                                  typeof value === "string",
+                          )
+                          .map((value) => value.trim())
+                          .filter((value) => value.length > 0)
+                    : [];
+
+                tgAttachmentRecords = sortRecordNames(records);
+                renderTgAttachmentOptions();
+            }
+
+            async function loadFaceAttachmentByName(recordName: string) {
+                const response = await fetch(
+                    `${faceAttachmentUrl}?action=load&name=${encodeURIComponent(recordName)}`,
+                    {
+                        cache: "no-store",
+                        credentials: "include",
+                    },
+                );
+                if (!response.ok) {
+                    const detail = (await response.text()).trim();
+                    throw new Error(
+                        `读取附件失败：HTTP ${response.status}${detail ? ` - ${detail}` : ""}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    facePrompt?: unknown;
+                    recordName?: unknown;
+                };
+
+                const promptText =
+                    typeof payload.facePrompt === "string"
+                        ? payload.facePrompt.trim()
+                        : "";
+                selectedFacePrompt = promptText;
+                selectedFaceAttachmentName =
+                    typeof payload.recordName === "string"
+                        ? payload.recordName.trim()
+                        : recordName;
+            }
+
+            async function loadTgAttachmentByName(recordName: string) {
+                const response = await fetch(
+                    `${tgAttachmentUrl}?action=load&name=${encodeURIComponent(recordName)}`,
+                    {
+                        cache: "no-store",
+                        credentials: "include",
+                    },
+                );
+                if (!response.ok) {
+                    const detail = (await response.text()).trim();
+                    throw new Error(
+                        `读取舌诊附件失败：HTTP ${response.status}${detail ? ` - ${detail}` : ""}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    tgData?: unknown;
+                    recordName?: unknown;
+                };
+
+                const tgData = payload.tgData;
+                const rawText =
+                    tgData &&
+                    typeof tgData === "object" &&
+                    typeof (tgData as { rawText?: unknown }).rawText ===
+                        "string"
+                        ? (tgData as { rawText: string }).rawText.trim()
+                        : "";
+                selectedTgPrompt = rawText;
+                selectedTgAttachmentName =
+                    typeof payload.recordName === "string"
+                        ? payload.recordName.trim()
+                        : recordName;
+            }
+
+            function normalizeRecordMessages(
+                payload: unknown,
+            ): ChatHistoryMessage[] {
+                if (!Array.isArray(payload)) {
+                    return [];
+                }
+
+                const normalized: ChatHistoryMessage[] = [];
+                for (const item of payload) {
+                    if (!item || typeof item !== "object") {
+                        continue;
+                    }
+                    const role = (item as { role?: unknown }).role;
+                    const content = (item as { content?: unknown }).content;
+                    if (
+                        (role === "user" || role === "assistant") &&
+                        typeof content === "string" &&
+                        content.trim()
+                    ) {
+                        normalized.push({ role, content });
+                    }
+                }
+
+                return normalized;
+            }
+
+            async function fetchRecordList() {
+                const response = await fetch(`${chatProxyUrl}?action=list`, {
+                    cache: "no-store",
+                    credentials: "include",
+                });
+                if (!response.ok) {
+                    throw new Error(
+                        `读取记录列表失败：HTTP ${response.status}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    records?: unknown;
+                };
+                const records = Array.isArray(payload.records)
+                    ? payload.records
+                          .filter(
+                              (value): value is string =>
+                                  typeof value === "string",
+                          )
+                          .map((value) => value.trim())
+                          .filter((value) => value.length > 0)
+                    : [];
+
+                recordNames = sortRecordNames(records);
+                renderHistoryOptions();
+            }
+
+            async function loadRecordByName(recordName: string) {
+                const response = await fetch(
+                    `${chatProxyUrl}?action=load&name=${encodeURIComponent(recordName)}`,
+                    {
+                        cache: "no-store",
+                        credentials: "include",
+                    },
+                );
+                if (!response.ok) {
+                    const detail = (await response.text()).trim();
+                    throw new Error(
+                        `读取记录失败：HTTP ${response.status}${detail ? ` - ${detail}` : ""}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    recordName?: unknown;
+                    messages?: unknown;
+                };
+
+                const loadedMessages = normalizeRecordMessages(
+                    payload.messages,
+                );
+                const loadedRecordName =
+                    typeof payload.recordName === "string"
+                        ? payload.recordName.trim()
+                        : recordName;
+
+                chatHistory.splice(0, chatHistory.length, ...loadedMessages);
+                currentRecordName = loadedRecordName;
+                if (
+                    currentRecordName &&
+                    !recordNames.includes(currentRecordName)
+                ) {
+                    recordNames = sortRecordNames([
+                        currentRecordName,
+                        ...recordNames,
+                    ]);
+                }
+                renderHistoryOptions();
+                renderConversation(chatHistory);
+            }
+
+            async function saveConversationRecord(): Promise<string> {
+                if (chatHistory.length === 0) {
+                    return "";
+                }
+
+                const response = await fetch(chatProxyUrl, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        recordName: currentRecordName || undefined,
+                        messages: chatHistory,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const detail = (await response.text()).trim();
+                    throw new Error(
+                        `保存记录失败：HTTP ${response.status}${detail ? ` - ${detail}` : ""}`,
+                    );
+                }
+
+                const payload = (await response.json()) as {
+                    recordName?: unknown;
+                    records?: unknown;
+                };
+
+                const savedRecordName =
+                    typeof payload.recordName === "string"
+                        ? payload.recordName.trim()
+                        : "";
+                if (savedRecordName) {
+                    currentRecordName = savedRecordName;
+                }
+
+                const recordsFromServer = Array.isArray(payload.records)
+                    ? payload.records
+                          .filter(
+                              (value): value is string =>
+                                  typeof value === "string",
+                          )
+                          .map((value) => value.trim())
+                          .filter((value) => value.length > 0)
+                    : [];
+
+                if (recordsFromServer.length > 0) {
+                    recordNames = sortRecordNames(recordsFromServer);
+                } else if (
+                    currentRecordName &&
+                    !recordNames.includes(currentRecordName)
+                ) {
+                    recordNames = sortRecordNames([
+                        currentRecordName,
+                        ...recordNames,
+                    ]);
+                }
+                renderHistoryOptions();
+
+                return currentRecordName;
+            }
+
+            function parseReply(payload: unknown): string {
+                if (typeof payload === "string") {
+                    return payload;
+                }
+                if (payload && typeof payload === "object") {
+                    const data = payload as {
+                        reply?: unknown;
+                        message?: unknown;
+                        choices?: Array<{
+                            message?: { content?: unknown };
+                            text?: unknown;
+                        }>;
+                    };
+                    if (typeof data.reply === "string") {
+                        return data.reply;
+                    }
+                    if (typeof data.message === "string") {
+                        return data.message;
+                    }
+                    if (
+                        data.message &&
+                        typeof data.message === "object" &&
+                        typeof (data.message as { content?: unknown })
+                            .content === "string"
+                    ) {
+                        return (data.message as { content: string }).content;
+                    }
+                    const content = data.choices?.[0]?.message?.content;
+                    if (typeof content === "string") {
+                        return content;
+                    }
+                    const text = data.choices?.[0]?.text;
+                    if (typeof text === "string") {
+                        return text;
+                    }
+                }
+                try {
+                    return JSON.stringify(payload);
+                } catch {
+                    return "收到响应，但无法解析内容。";
+                }
+            }
+
+            async function loadApiConfig() {
+                if (!statusEl) {
+                    return;
+                }
+                try {
+                    const response = await fetch(configUrl, {
+                        cache: "no-store",
+                        credentials: "include",
+                    });
+                    if (!response.ok) {
+                        throw new Error(
+                            `读取配置失败：HTTP ${response.status}`,
+                        );
+                    }
+                    const config = (await response.json()) as {
+                        apiEndpoint?: string;
+                        model?: string;
+                        selectedOptionName?: string;
+                        stream?: boolean;
+                        temperature?: number;
+                        modelOptions?: Array<
+                            | string
+                            | {
+                                  name?: string;
+                                  label?: string;
+                                  model?: string;
+                                  apiEndpoint?: string;
+                                  systemPrompt?: string;
+                                  stream?: boolean;
+                                  temperature?: number;
+                              }
+                        >;
+                        systemPrompt?: string;
+                    };
+                    const fallbackApiEndpoint = (
+                        config.apiEndpoint || ""
+                    ).trim();
+                    const fallbackModel = (config.model || "llama3.2").trim();
+                    const fallbackSystemPrompt = (
+                        config.systemPrompt || ""
+                    ).trim();
+                    const fallbackStream =
+                        typeof config.stream === "boolean"
+                            ? config.stream
+                            : false;
+                    const fallbackTemperature = normalizeTemperature(
+                        config.temperature,
+                    );
+
+                    apiEndpoint = normalizeApiEndpoint(fallbackApiEndpoint);
+                    model = fallbackModel;
+                    systemPrompt = fallbackSystemPrompt;
+
+                    modelOptions = normalizeModelOptions(
+                        Array.isArray(config.modelOptions)
+                            ? config.modelOptions
+                            : [],
+                        {
+                            apiEndpoint: fallbackApiEndpoint,
+                            model: fallbackModel,
+                            systemPrompt: fallbackSystemPrompt,
+                            stream: fallbackStream,
+                            temperature: fallbackTemperature,
+                        },
+                    );
+
+                    const preferredOptionName = (
+                        config.selectedOptionName || ""
+                    ).trim();
+                    const matchedOptionName = modelOptions.find(
+                        (option) =>
+                            option.model === fallbackModel &&
+                            option.apiEndpoint === fallbackApiEndpoint,
+                    )?.name;
+
+                    selectedOptionName =
+                        modelOptions.find(
+                            (option) => option.name === preferredOptionName,
+                        )?.name ||
+                        matchedOptionName ||
+                        modelOptions[0]?.name ||
+                        "";
+
+                    if (selectedOptionName) {
+                        applySelectedOption(selectedOptionName);
+                    }
+                    renderModelOptions();
+
+                    if (apiEndpoint) {
+                        setStatus(
+                            `接口已就绪（${selectedOptionName || model}）`,
+                        );
+                        await ensureLocalOllamaModelReady();
+                    } else {
+                        setStatus("请先在 api.json 中填写 apiEndpoint。");
+                    }
+                } catch (error) {
+                    setStatus(`无法读取 api.json：${getErrorMessage(error)}`);
+                }
+            }
+
+            if (statusEl && messagesEl && formEl && inputEl && sendBtn) {
+                syncModelPickerMenu = setupPickerMenu({
+                    rootEl: modelPickerRootEl,
+                    selectEl: modelSelectEl,
+                    triggerEl: modelPickerTriggerEl,
+                    labelEl: modelPickerLabelEl,
+                    panelEl: modelPickerPanelEl,
+                    optionsEl: modelPickerOptionsEl,
+                    emptyLabel: "未选择",
+                });
+                syncHistoryPickerMenu = setupPickerMenu({
+                    rootEl: historyPickerRootEl,
+                    selectEl: historySelectEl,
+                    triggerEl: historyPickerTriggerEl,
+                    labelEl: historyPickerLabelEl,
+                    panelEl: historyPickerPanelEl,
+                    optionsEl: historyPickerOptionsEl,
+                    emptyLabel: "当前会话",
+                });
+                syncFaceAttachmentPickerMenu = setupPickerMenu({
+                    rootEl: attachmentFacePickerRootEl,
+                    selectEl: attachmentFaceSelectEl,
+                    triggerEl: attachmentFacePickerTriggerEl,
+                    labelEl: attachmentFacePickerLabelEl,
+                    panelEl: attachmentFacePickerPanelEl,
+                    optionsEl: attachmentFacePickerOptionsEl,
+                    emptyLabel: "不附加",
+                });
+                syncTgAttachmentPickerMenu = setupPickerMenu({
+                    rootEl: attachmentTgPickerRootEl,
+                    selectEl: attachmentTgSelectEl,
+                    triggerEl: attachmentTgPickerTriggerEl,
+                    labelEl: attachmentTgPickerLabelEl,
+                    panelEl: attachmentTgPickerPanelEl,
+                    optionsEl: attachmentTgPickerOptionsEl,
+                    emptyLabel: "不附加",
+                });
+
+                inputEl.addEventListener("input", autoResizeInput);
+                window.addEventListener("resize", autoResizeInput);
+                inputEl.addEventListener("keydown", (event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        formEl.requestSubmit();
+                    }
+                });
+                modelSelectEl?.addEventListener("change", async () => {
+                    if (modelSelectEl.value === ADD_MODEL_VALUE) {
+                        modelSelectEl.value = selectedOptionName;
+                        syncModelPickerMenu();
+                        openAddModelModal();
+                        return;
+                    }
+                    applySelectedOption(modelSelectEl.value);
+                    // 前端流式与温控显示
+                    // setStatus(
+                    //     `已切换：${selectedOptionName}（${model}，流式：${useStream ? "开" : "关"}，温度：${currentTemperature ?? "默认"}）`,
+                    // );
+                    setStatus(`已切换：${selectedOptionName}（${model}）`);
+                    await ensureLocalOllamaModelReady();
+                });
+                streamToggleEl?.addEventListener("change", () => {
+                    useStream = streamToggleEl.checked;
+                    setStatus(
+                        `已${useStream ? "开启" : "关闭"}流式输出（温度：${currentTemperature ?? "默认"}）`,
+                    );
+                });
+                temperatureInputEl?.addEventListener("change", () => {
+                    currentTemperature = normalizeTemperature(
+                        temperatureInputEl.value,
+                    );
+                    if (
+                        temperatureInputEl.value.trim() &&
+                        currentTemperature === null
+                    ) {
+                        temperatureInputEl.value = "";
+                    } else if (currentTemperature !== null) {
+                        temperatureInputEl.value = String(currentTemperature);
+                    }
+                    setStatus(
+                        `温度已设置为：${currentTemperature ?? "默认"}（流式：${useStream ? "开" : "关"}）`,
+                    );
+                });
+                modelModalCancelEl?.addEventListener("click", () => {
+                    closeAddModelModal();
+                });
+                modelModalBackdropEl?.addEventListener("click", (event) => {
+                    if (event.target === modelModalBackdropEl) {
+                        closeAddModelModal();
+                    }
+                });
+                document.addEventListener("keydown", (event) => {
+                    if (event.key === "Escape") {
+                        closeAddModelModal();
+                    }
+                });
+                modelModalEl?.addEventListener("submit", async (event) => {
+                    event.preventDefault();
+                    try {
+                        await submitAddModel();
+                    } catch (error) {
+                        setStatus(`添加模型失败：${getErrorMessage(error)}`);
+                    }
+                });
+                historySelectEl?.addEventListener("change", async () => {
+                    const selectedHistory = historySelectEl.value.trim();
+                    if (!selectedHistory) {
+                        currentRecordName = "";
+                        chatHistory.splice(0, chatHistory.length);
+                        renderConversation(chatHistory);
+                        setStatus("已切换到当前会话。可以开始新对话。");
+                        inputEl.focus();
+                        return;
+                    }
+
+                    sendBtn.disabled = true;
+                    try {
+                        await loadRecordByName(selectedHistory);
+                        setStatus(`已加载对话记录：${selectedHistory}`);
+                    } catch (error) {
+                        setStatus(`加载记录失败：${getErrorMessage(error)}`);
+                    } finally {
+                        sendBtn.disabled = false;
+                        inputEl.focus();
+                    }
+                });
+                attachmentFaceSelectEl?.addEventListener("change", async () => {
+                    const selectedAttachment =
+                        attachmentFaceSelectEl.value.trim();
+                    if (!selectedAttachment) {
+                        selectedFaceAttachmentName = "";
+                        selectedFacePrompt = "";
+                        setStatus("已取消面诊附件。将仅使用问诊基础提示词。");
+                        return;
+                    }
+
+                    sendBtn.disabled = true;
+                    try {
+                        await loadFaceAttachmentByName(selectedAttachment);
+                        setStatus(`已附加面诊数据：${selectedAttachment}`);
+                    } catch (error) {
+                        selectedFaceAttachmentName = "";
+                        selectedFacePrompt = "";
+                        attachmentFaceSelectEl.value = "";
+                        syncFaceAttachmentPickerMenu();
+                        setStatus(`附件加载失败：${getErrorMessage(error)}`);
+                    } finally {
+                        sendBtn.disabled = false;
+                        inputEl.focus();
+                    }
+                });
+                attachmentFacePickerTriggerEl?.addEventListener("click", () => {
+                    void (async () => {
+                        try {
+                            await fetchFaceAttachmentList();
+                        } catch (error) {
+                            setStatus(
+                                `读取附件列表失败：${getErrorMessage(error)}`,
+                            );
+                        }
+                    })();
+                });
+                attachmentTgSelectEl?.addEventListener("change", async () => {
+                    const selectedAttachment =
+                        attachmentTgSelectEl.value.trim();
+                    if (!selectedAttachment) {
+                        selectedTgAttachmentName = "";
+                        selectedTgPrompt = "";
+                        setStatus("已取消舌诊附件。将仅使用问诊基础提示词。");
+                        return;
+                    }
+
+                    sendBtn.disabled = true;
+                    try {
+                        await loadTgAttachmentByName(selectedAttachment);
+                        setStatus(`已附加舌诊数据：${selectedAttachment}`);
+                    } catch (error) {
+                        selectedTgAttachmentName = "";
+                        selectedTgPrompt = "";
+                        attachmentTgSelectEl.value = "";
+                        syncTgAttachmentPickerMenu();
+                        setStatus(
+                            `舌诊附件加载失败：${getErrorMessage(error)}`,
+                        );
+                    } finally {
+                        sendBtn.disabled = false;
+                        inputEl.focus();
+                    }
+                });
+                attachmentTgPickerTriggerEl?.addEventListener("click", () => {
+                    void (async () => {
+                        try {
+                            await fetchTgAttachmentList();
+                        } catch (error) {
+                            setStatus(
+                                `读取舌诊附件列表失败：${getErrorMessage(error)}`,
+                            );
+                        }
+                    })();
+                });
+
+                formEl.addEventListener("submit", async (event) => {
+                    event.preventDefault();
+                    const message = inputEl.value.trim();
+                    if (!message) {
+                        return;
+                    }
+                    if (!apiEndpoint) {
+                        setStatus("请先在 api.json 中填写 apiEndpoint。");
+                        return;
+                    }
+
+                    await ensureLocalOllamaModelReady();
+
+                    appendMessage("user", message);
+                    chatHistory.push({ role: "user", content: message });
+                    inputEl.value = "";
+                    autoResizeInput();
+                    sendBtn.disabled = true;
+                    setStatus("AI 思考中...");
+
+                    try {
+                        const messages: Array<{
+                            role: "system" | "user" | "assistant";
+                            content: string;
+                        }> = [];
+
+                        if (systemPrompt) {
+                            messages.push({
+                                role: "system",
+                                content: systemPrompt.trim(),
+                            });
+                        }
+
+                        const requestHistory = chatHistory.map((item) => ({
+                            role: item.role,
+                            content: item.content,
+                        }));
+
+                        if (selectedFacePrompt) {
+                            for (
+                                let index = requestHistory.length - 1;
+                                index >= 0;
+                                index -= 1
+                            ) {
+                                const item = requestHistory[index];
+                                if (item.role === "user") {
+                                    item.content = `${item.content}\n\n【面诊附件数据（${selectedFaceAttachmentName || "未命名"}）】\n${selectedFacePrompt}`;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (selectedTgPrompt) {
+                            for (
+                                let index = requestHistory.length - 1;
+                                index >= 0;
+                                index -= 1
+                            ) {
+                                const item = requestHistory[index];
+                                if (item.role === "user") {
+                                    item.content = `${item.content}\n\n【舌诊附件数据（${selectedTgAttachmentName || "未命名"}）】\n${selectedTgPrompt}`;
+                                    break;
+                                }
+                            }
+                        }
+
+                        messages.push(...requestHistory);
+
+                        const response = await fetch(chatProxyUrl, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            credentials: "include",
+                            body: JSON.stringify({
+                                selectedOptionName,
+                                messages,
+                                stream: useStream,
+                                temperature: currentTemperature,
+                            }),
+                        });
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            const detail = errorText.trim();
+                            const isProxyNotFound =
+                                response.status === 404 &&
+                                detail.includes("Path: /project/chat");
+                            if (isProxyNotFound) {
+                                throw new Error(
+                                    "本地代理路由 /project/chat 不可用。请通过 `npm run dev` 或 `npm run preview` 启动 Astro，并访问终端显示的正确端口。",
+                                );
+                            }
+                            throw new Error(
+                                `请求失败：HTTP ${response.status}${detail ? ` - ${detail}` : ""}`,
+                            );
+                        }
+
+                        const contentType =
+                            response.headers.get("content-type") || "";
+                        const resolvedModelHeader =
+                            response.headers.get("x-resolved-model") || "";
+                        let aiReply = "";
+                        if (useStream) {
+                            const aiBubble = appendMessage("ai", "");
+                            aiReply = await readPlainTextStream(
+                                response,
+                                aiBubble,
+                            );
+                        } else {
+                            const payload = contentType.includes(
+                                "application/json",
+                            )
+                                ? await response.json()
+                                : await response.text();
+                            aiReply = parseReply(payload);
+                            appendMessage("ai", aiReply);
+                        }
+
+                        if (!aiReply.trim()) {
+                            aiReply = "（空响应）";
+                        }
+                        chatHistory.push({
+                            role: "assistant",
+                            content: aiReply,
+                        });
+                        const statusBase =
+                            resolvedModelHeader && resolvedModelHeader !== model
+                                ? `请求成功（实际模型：${resolvedModelHeader}）。`
+                                : "请求成功。";
+                        if (
+                            resolvedModelHeader &&
+                            resolvedModelHeader !== model
+                        ) {
+                            model = resolvedModelHeader;
+                        }
+
+                        try {
+                            const savedRecord = await saveConversationRecord();
+                            if (savedRecord) {
+                                setStatus(
+                                    `${statusBase} 已保存到记录：${savedRecord}。继续提问吧。`,
+                                );
+                            } else {
+                                setStatus(`${statusBase} 继续提问吧。`);
+                            }
+                        } catch (saveError) {
+                            setStatus(
+                                `${statusBase} 但保存记录失败：${getErrorMessage(saveError)}`,
+                            );
+                        }
+                    } catch (error) {
+                        const errorMessage = getErrorMessage(error);
+                        const notFoundModel =
+                            extractModelNotFound(errorMessage);
+                        let aiMessage = "";
+                        if (notFoundModel) {
+                            aiMessage = `模型 ${notFoundModel} 不存在，请先执行：ollama pull ${notFoundModel}`;
+                        } else {
+                            aiMessage = `请求出错：${errorMessage}`;
+                        }
+                        appendMessage("ai", aiMessage);
+                        chatHistory.push({
+                            role: "assistant",
+                            content: aiMessage,
+                        });
+                        try {
+                            await saveConversationRecord();
+                        } catch {}
+                        setStatus(
+                            "请求失败，请检查模型是否已安装、接口地址或跨域设置。",
+                        );
+                    } finally {
+                        sendBtn.disabled = false;
+                        inputEl.focus();
+                    }
+                });
+
+                renderHistoryOptions();
+                void (async () => {
+                    await loadApiConfig();
+                    try {
+                        await fetchRecordList();
+                        await fetchFaceAttachmentList();
+                        await fetchTgAttachmentList();
+                    } catch (error) {
+                        setStatus(
+                            `读取历史记录失败：${getErrorMessage(error)}`,
+                        );
+                    }
+                    autoResizeInput();
+                })();
+            } else {
+                console.error("项目页初始化失败：缺少必要 DOM 节点。");
+            }
+        </script>
+    </body>
+</html>

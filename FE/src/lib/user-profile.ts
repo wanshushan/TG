@@ -136,6 +136,14 @@ function buildRequestHeaders(cookieHeader?: string): Record<string, string> {
     return headers;
 }
 
+function hasSessionCookie(cookieHeader?: string): boolean {
+    const value = toNonEmptyString(cookieHeader);
+    if (!value) {
+        return false;
+    }
+    return /(?:^|;\s*)rd_session=/.test(value);
+}
+
 function clonePoints(points: UserChartPoint[]): UserChartPoint[] {
     return points.map((point) => ({ x: point.x, y: point.y }));
 }
@@ -378,6 +386,14 @@ async function fetchAuthStatus(
             isLoggedIn: false,
             username: fallbackUsername,
             message: "未配置登录状态接口，使用本地数据",
+        };
+    }
+
+    if (!hasSessionCookie(options.cookieHeader)) {
+        return {
+            isLoggedIn: false,
+            username: fallbackUsername,
+            message: "未检测到登录 Cookie",
         };
     }
 

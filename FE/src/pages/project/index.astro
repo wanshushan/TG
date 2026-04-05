@@ -46,7 +46,7 @@ import { siteConfig } from "../../config";
                 width: 100%;
                 max-width: none;
                 margin: 0;
-                padding: 0.8rem 0;
+                padding: 0.8rem 0 8.6rem;
                 flex: 1;
                 min-height: 0;
                 display: flex;
@@ -146,7 +146,7 @@ import { siteConfig } from "../../config";
             .messages {
                 min-height: 0;
                 overflow-y: auto;
-                padding: 1rem;
+                padding: 1rem 1rem 9rem;
                 background: rgba(var(--gray-light), 0.45);
             }
             .empty-state {
@@ -273,9 +273,18 @@ import { siteConfig } from "../../config";
                 display: flex;
                 align-items: flex-end;
                 gap: 0.7rem;
+                position: fixed;
+                left: 50%;
+                bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px));
+                transform: translateX(-50%);
+                width: calc(100% - 10px);
+                z-index: 55;
                 padding: 0.85rem 1rem 1rem;
+                border-radius: var(--chat-radius);
                 border-top: 1px solid rgba(var(--gray), 0.35);
                 background: rgba(var(--gray-light), 0.75);
+                box-shadow: 0 10px 26px rgba(var(--black), 0.16);
+                backdrop-filter: blur(5px);
             }
             .chat-form textarea {
                 flex: 1;
@@ -330,6 +339,87 @@ import { siteConfig } from "../../config";
             .chat-form button:disabled {
                 opacity: 0.55;
                 cursor: not-allowed;
+            }
+            .model-modal-backdrop {
+                position: fixed;
+                inset: 0;
+                z-index: 70;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                padding: 1rem;
+                background: rgba(11, 18, 34, 0.45);
+                backdrop-filter: blur(2px);
+            }
+            .model-modal-backdrop.is-open {
+                display: flex;
+            }
+            .model-modal {
+                width: min(30rem, calc(100vw - 2rem));
+                border-radius: 1rem;
+                background: #fff;
+                padding: 1rem;
+                display: grid;
+                gap: 0.75rem;
+                box-shadow: 0 24px 48px rgba(var(--black), 0.2);
+            }
+            .model-modal h3 {
+                margin: 0;
+                font-size: 1.1rem;
+            }
+            .model-modal p {
+                margin: 0;
+                color: rgba(var(--gray-dark), 0.78);
+                font-size: 0.86rem;
+            }
+            .model-modal label {
+                display: grid;
+                gap: 0.3rem;
+                font-size: 0.84rem;
+                color: rgba(var(--gray-dark), 0.84);
+            }
+            .model-modal input {
+                height: 2.4rem;
+                border: 1px solid rgba(var(--gray), 0.42);
+                border-radius: 0.72rem;
+                padding: 0 0.7rem;
+                font-size: 0.9rem;
+                color: rgb(var(--gray-dark));
+                background: #fff;
+            }
+            .model-modal input:focus {
+                outline: none;
+                border-color: rgba(var(--accent-rgb), 0.55);
+                box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.18);
+            }
+            .model-modal input:-webkit-autofill,
+            .model-modal input:-webkit-autofill:hover,
+            .model-modal input:-webkit-autofill:focus {
+                -webkit-text-fill-color: rgb(var(--gray-dark));
+                box-shadow: 0 0 0 1000px #fff inset;
+                transition: background-color 9999s ease-in-out 0s;
+            }
+            .model-modal-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 0.55rem;
+                margin-top: 0.15rem;
+            }
+            .model-modal-actions button {
+                border: none;
+                border-radius: 999px;
+                height: 2.2rem;
+                padding: 0 1rem;
+                font-size: 0.85rem;
+                cursor: pointer;
+            }
+            .model-modal-cancel {
+                background: rgba(var(--gray-light), 0.95);
+                color: rgb(var(--gray-dark));
+            }
+            .model-modal-submit {
+                background: var(--accent-dark);
+                color: #fff;
             }
             .chat-form-actions {
                 display: inline-flex;
@@ -457,6 +547,8 @@ import { siteConfig } from "../../config";
                     padding: 0.75rem;
                     flex-direction: column;
                     align-items: stretch;
+                    bottom: calc(0.45rem + env(safe-area-inset-bottom, 0px));
+                    width: calc(100% - 8px);
                 }
                 .chat-form-actions {
                     width: 100%;
@@ -712,8 +804,75 @@ import { siteConfig } from "../../config";
                 </form>
             </section>
         </main>
-        <div style="--back-to-top-extra-offset: 56px;">
+        <div style="--back-to-top-extra-offset: 132px;">
             <BackToTop />
+        </div>
+
+        <div
+            id="model-modal-backdrop"
+            class="model-modal-backdrop"
+            aria-hidden="true"
+        >
+            <form id="model-modal" class="model-modal" novalidate autocomplete="off">
+                <h3>添加模型</h3>
+                <p>填写后将保存到你的账号，可在问诊模型列表中直接使用。</p>
+                <label>
+                    自定义名称
+                    <input
+                        id="model-name-input"
+                        type="text"
+                        maxlength="80"
+                        autocomplete="off"
+                        required
+                        placeholder="例如：我的 GPT-4o"
+                    />
+                </label>
+                <label>
+                    实际模型名
+                    <input
+                        id="model-id-input"
+                        type="text"
+                        maxlength="120"
+                        autocomplete="off"
+                        required
+                        placeholder="例如：openai/gpt-4o"
+                    />
+                </label>
+                <label>
+                    API Key
+                    <input
+                        id="model-apikey-input"
+                        type="password"
+                        maxlength="240"
+                        autocomplete="new-password"
+                        required
+                        placeholder="输入你的密钥"
+                    />
+                </label>
+                <label>
+                    API Endpoint
+                    <input
+                        id="model-endpoint-input"
+                        type="url"
+                        maxlength="300"
+                        autocomplete="off"
+                        required
+                        placeholder="https://example.com/v1/chat/completions"
+                    />
+                </label>
+                <div class="model-modal-actions">
+                    <button
+                        id="model-modal-cancel"
+                        class="model-modal-cancel"
+                        type="button">取消</button
+                    >
+                    <button
+                        id="model-modal-submit"
+                        class="model-modal-submit"
+                        type="submit">保存</button
+                    >
+                </div>
+            </form>
         </div>
 
         <script>
@@ -819,10 +978,33 @@ import { siteConfig } from "../../config";
             const attachmentTgPickerOptionsEl = document.querySelector(
                 "#attachment-tg-picker-options",
             ) as HTMLDivElement | null;
+            const modelModalBackdropEl = document.querySelector(
+                "#model-modal-backdrop",
+            ) as HTMLDivElement | null;
+            const modelModalEl = document.querySelector(
+                "#model-modal",
+            ) as HTMLFormElement | null;
+            const modelNameInputEl = document.querySelector(
+                "#model-name-input",
+            ) as HTMLInputElement | null;
+            const modelIdInputEl = document.querySelector(
+                "#model-id-input",
+            ) as HTMLInputElement | null;
+            const modelApiKeyInputEl = document.querySelector(
+                "#model-apikey-input",
+            ) as HTMLInputElement | null;
+            const modelEndpointInputEl = document.querySelector(
+                "#model-endpoint-input",
+            ) as HTMLInputElement | null;
+            const modelModalCancelEl = document.querySelector(
+                "#model-modal-cancel",
+            ) as HTMLButtonElement | null;
             const configUrl = "/api/chat/config";
             const chatProxyUrl = "/api/chat";
             const faceAttachmentUrl = "/api/chat/face";
             const tgAttachmentUrl = "/api/tg/history";
+            const addModelUrl = "/api/user/model-options";
+            const ADD_MODEL_VALUE = "__add_model__";
             let apiEndpoint = "";
             let model = "llama3.2";
             let selectedOptionName = "";
@@ -855,6 +1037,104 @@ import { siteConfig } from "../../config";
             let tgAttachmentRecords: string[] = [];
             let selectedTgAttachmentName = "";
             let selectedTgPrompt = "";
+
+            function closeAddModelModal() {
+                if (!modelModalBackdropEl) {
+                    return;
+                }
+                modelModalBackdropEl.classList.remove("is-open");
+                modelModalBackdropEl.setAttribute("aria-hidden", "true");
+            }
+
+            function resetAddModelFields() {
+                if (modelNameInputEl) {
+                    modelNameInputEl.value = "";
+                }
+                if (modelIdInputEl) {
+                    modelIdInputEl.value = "";
+                }
+                if (modelApiKeyInputEl) {
+                    modelApiKeyInputEl.value = "";
+                }
+                if (modelEndpointInputEl) {
+                    modelEndpointInputEl.value = "";
+                }
+            }
+
+            function openAddModelModal() {
+                if (!modelModalBackdropEl) {
+                    return;
+                }
+                resetAddModelFields();
+                modelModalBackdropEl.classList.add("is-open");
+                modelModalBackdropEl.setAttribute("aria-hidden", "false");
+                modelNameInputEl?.focus();
+            }
+
+            async function submitAddModel() {
+                const name = modelNameInputEl?.value.trim() || "";
+                const modelId = modelIdInputEl?.value.trim() || "";
+                const apiKey = modelApiKeyInputEl?.value.trim() || "";
+                const apiEndpoint = modelEndpointInputEl?.value.trim() || "";
+
+                if (!name || !modelId || !apiKey || !apiEndpoint) {
+                    setStatus(
+                        "请完整填写自定义名称、实际模型名、API Key 和 API Endpoint",
+                    );
+                    return;
+                }
+
+                const response = await fetch(addModelUrl, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: "application/json",
+                    },
+                    body: JSON.stringify({
+                        scope: "chat",
+                        name,
+                        model: modelId,
+                        apiEndpoint,
+                        apiKey,
+                        stream: true,
+                    }),
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                const message =
+                    payload && typeof payload.message === "string"
+                        ? payload.message
+                        : "保存模型失败";
+
+                if (!response.ok) {
+                    throw new Error(message);
+                }
+
+                await loadApiConfig();
+                selectedOptionName = name;
+                applySelectedOption(name);
+                if (modelSelectEl) {
+                    modelSelectEl.value = name;
+                }
+                syncModelPickerMenu();
+
+                if (modelNameInputEl) {
+                    modelNameInputEl.value = "";
+                }
+                if (modelIdInputEl) {
+                    modelIdInputEl.value = "";
+                }
+                if (modelApiKeyInputEl) {
+                    modelApiKeyInputEl.value = "";
+                }
+                if (modelEndpointInputEl) {
+                    modelEndpointInputEl.value = "";
+                }
+
+                closeAddModelModal();
+                setStatus(`已添加并切换模型：${name}`);
+            }
 
             function normalizeTemperature(value: unknown): number | null {
                 if (typeof value === "number" && Number.isFinite(value)) {
@@ -1025,6 +1305,12 @@ import { siteConfig } from "../../config";
                     optionEl.textContent = option.name;
                     modelSelectEl.appendChild(optionEl);
                 }
+
+                const addOptionEl = document.createElement("option");
+                addOptionEl.value = ADD_MODEL_VALUE;
+                addOptionEl.textContent = "+ 添加模型";
+                modelSelectEl.appendChild(addOptionEl);
+
                 if (selectedOptionName) {
                     modelSelectEl.value = selectedOptionName;
                 }
@@ -1901,6 +2187,12 @@ import { siteConfig } from "../../config";
                     }
                 });
                 modelSelectEl?.addEventListener("change", async () => {
+                    if (modelSelectEl.value === ADD_MODEL_VALUE) {
+                        modelSelectEl.value = selectedOptionName;
+                        syncModelPickerMenu();
+                        openAddModelModal();
+                        return;
+                    }
                     applySelectedOption(modelSelectEl.value);
                     // 前端流式与温控显示
                     // setStatus(
@@ -1930,6 +2222,27 @@ import { siteConfig } from "../../config";
                     setStatus(
                         `温度已设置为：${currentTemperature ?? "默认"}（流式：${useStream ? "开" : "关"}）`,
                     );
+                });
+                modelModalCancelEl?.addEventListener("click", () => {
+                    closeAddModelModal();
+                });
+                modelModalBackdropEl?.addEventListener("click", (event) => {
+                    if (event.target === modelModalBackdropEl) {
+                        closeAddModelModal();
+                    }
+                });
+                document.addEventListener("keydown", (event) => {
+                    if (event.key === "Escape") {
+                        closeAddModelModal();
+                    }
+                });
+                modelModalEl?.addEventListener("submit", async (event) => {
+                    event.preventDefault();
+                    try {
+                        await submitAddModel();
+                    } catch (error) {
+                        setStatus(`添加模型失败：${getErrorMessage(error)}`);
+                    }
                 });
                 historySelectEl?.addEventListener("change", async () => {
                     const selectedHistory = historySelectEl.value.trim();

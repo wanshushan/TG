@@ -6,7 +6,6 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from threading import Lock
 from typing import Any
 from urllib import error as url_error
 from urllib import request as url_request
@@ -14,6 +13,15 @@ from urllib import request as url_request
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
+from storage.db import (
+    get_conversation_messages,
+    get_next_record_name,
+    list_conversation_records,
+    list_scores,
+    list_user_model_options,
+    save_conversation_record,
+    upsert_score,
+)
 
 router = APIRouter()
 
@@ -22,8 +30,13 @@ MENTAL_DIR = Path(__file__).resolve().parent
 MENTAL_DATA_DIR = BASE_DIR / "data" / "mental"
 CONFIG_PATH = MENTAL_DIR / "api.json"
 PROMPT_PATH = MENTAL_DIR / "prompt.md"
+MENTAL_ROOT = MENTAL_DIR.resolve()
+SKILL_ROOT = (MENTAL_DIR / "SKILL").resolve()
+SKILL_TAG_PATTERN = re.compile(r"\{\{\s*SKILL\s*:\s*([^\r\n{}]+?)\s*\}\}", flags=re.IGNORECASE)
 
-_STORE_LOCK = Lock()
+MENTAL_SCOPE = "mental"
+MENTAL_SAS_SCOPE = "mental-sas"
+MENTAL_SDS_SCOPE = "mental-sds"
 MENTAL_RECORD_STEM_PATTERN = re.compile(r"^mental-\d{2}-\d{2}-\d{2}T\d{2}-\d{2}(?:-\d+)?$")
 
 
@@ -59,6 +72,99 @@ def _read_text_file(path: Path) -> str:
     if not path.exists():
         return ""
     return path.read_text(encoding="utf-8").strip()
+
+
+def _split_skill_spec(spec: str) -> tuple[str, list[str]]:
+    raw = (spec or "").strip()
+    if not raw:
+        return "", []
+
+    path_part, sep, query_part = raw.partition("?")
+    if not sep:
+        return path_part.strip(), []
+
+    keywords: list[str] = []
+    for piece in query_part.split("&"):
+        segment = piece.strip()
+        if not segment or "=" not in segment:
+            continue
+        key, value = segment.split("=", 1)
+        key = key.strip().lower()
+        if key not in {"when", "scene"}:
+            continue
+        for token in re.split(r"[|,，;；]", value):
+            keyword = token.strip().lower()
+            if keyword:
+                keywords.append(keyword)
+
+    deduped = list(dict.fromkeys(keywords))
+    return path_part.strip(), deduped
+
+
+def _build_scene_context(messages: list[ChatMessage] | None) -> str:
+    if not messages:
+        return ""
+    parts: list[str] = []
+    for message in messages:
+        role = (message.role or "").strip()
+        if role not in {"user", "assistant"}:
+            continue
+        content = (message.content or "").strip()
+        if content:
+            parts.append(content.lower())
+    return "\n".join(parts)
+
+
+def _resolve_skill_path(skill_relative_path: str) -> Path | None:
+    normalized = (skill_relative_path or "").strip().replace("\\", "/")
+    if not normalized:
+        return None
+
+    if normalized.lower().startswith("skill/"):
+        normalized = normalized[6:]
+
+    candidate = Path(normalized)
+    if candidate.is_absolute():
+        return None
+
+    resolved = (SKILL_ROOT / candidate).resolve()
+    try:
+        resolved.relative_to(SKILL_ROOT)
+    except ValueError:
+        return None
+
+    if not resolved.exists() or not resolved.is_file():
+        return None
+
+    return resolved
+
+
+def _load_system_prompt(messages: list[ChatMessage] | None = None) -> str:
+    base_prompt = _read_text_file(PROMPT_PATH)
+    if not base_prompt:
+        return ""
+
+    scene_context = _build_scene_context(messages)
+
+    def replace_skill(match: re.Match[str]) -> str:
+        raw_spec = match.group(1).strip()
+        raw_path, scene_keywords = _split_skill_spec(raw_spec)
+        if scene_keywords and not any(keyword in scene_context for keyword in scene_keywords):
+            return ""
+
+        skill_path = _resolve_skill_path(raw_path)
+        if skill_path is None:
+            return f"[SKILL加载失败: {raw_path}]"
+
+        content = _read_text_file(skill_path)
+        if not content:
+            return f"[SKILL为空: {raw_path}]"
+
+        relative = skill_path.relative_to(MENTAL_ROOT).as_posix()
+        return f"\n[SKILL: {relative}]\n{content}\n"
+
+    expanded = SKILL_TAG_PATTERN.sub(replace_skill, base_prompt)
+    return expanded.strip()
 
 
 def _load_env_map() -> dict[str, str]:
@@ -130,6 +236,19 @@ def _load_mental_config_raw() -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         return {}
     return {}
+
+
+def _inject_user_model_options(raw: dict[str, Any], username: str) -> dict[str, Any]:
+    merged = dict(raw)
+    configured = raw.get("modelOptions") if isinstance(raw.get("modelOptions"), list) else []
+    merged_options: list[Any] = list(configured)
+
+    normalized_username = (username or "").strip()
+    if normalized_username:
+        merged_options.extend(list_user_model_options(normalized_username, MENTAL_SCOPE))
+
+    merged["modelOptions"] = merged_options
+    return merged
 
 
 def _normalize_model_options(raw: dict[str, Any]) -> list[ModelOption]:
@@ -335,11 +454,8 @@ def _get_session_username(request: Request) -> str:
     return value.strip() if isinstance(value, str) else ""
 
 
-def _get_user_mental_dir(request: Request) -> tuple[str, Path]:
-    username = _safe_username(_get_session_username(request))
-    user_dir = MENTAL_DATA_DIR / username
-    user_dir.mkdir(parents=True, exist_ok=True)
-    return username, user_dir
+def _get_request_username(request: Request) -> str:
+    return _safe_username(_get_session_username(request))
 
 
 def _format_record_stem(now: datetime | None = None) -> str:
@@ -350,30 +466,13 @@ def _format_record_stem(now: datetime | None = None) -> str:
     )
 
 
-def _list_record_names(user_dir: Path) -> list[str]:
-    if not user_dir.exists():
-        return []
-    names: list[str] = []
-    for entry in user_dir.iterdir():
-        if entry.is_dir() and MENTAL_RECORD_STEM_PATTERN.match(entry.name):
-            json_path = entry / f"{entry.name}.json"
-            if json_path.exists() and json_path.is_file():
-                names.append(entry.name)
-    names.sort(reverse=True)
-    return names
+def _list_record_names(username: str) -> list[str]:
+    return list_conversation_records(username, MENTAL_SCOPE)
 
 
-def _build_unique_record_stem(user_dir: Path) -> str:
+def _build_unique_record_stem(username: str) -> str:
     base = _format_record_stem()
-    existing = set(_list_record_names(user_dir))
-    if base not in existing:
-        return base
-    suffix = 1
-    while True:
-        candidate = f"{base}-{suffix}"
-        if candidate not in existing:
-            return candidate
-        suffix += 1
+    return get_next_record_name(username, MENTAL_SCOPE, base)
 
 
 def _sanitize_record_name(raw_name: str | None) -> str | None:
@@ -385,49 +484,18 @@ def _sanitize_record_name(raw_name: str | None) -> str | None:
     return name
 
 
-def _record_json_path(user_dir: Path, record_name: str) -> Path:
-    return user_dir / record_name / f"{record_name}.json"
+def _read_record_messages(username: str, record_name: str) -> list[dict[str, str]]:
+    return get_conversation_messages(username, MENTAL_SCOPE, record_name)
 
 
-def _read_record_messages(user_dir: Path, record_name: str) -> list[dict[str, str]]:
-    path = _record_json_path(user_dir, record_name)
-    if not path.exists():
-        raise FileNotFoundError("记录不存在")
-
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise FileNotFoundError("记录不存在") from exc
-
-    raw_messages = payload.get("messages") if isinstance(payload, dict) else None
-    if not isinstance(raw_messages, list):
-        return []
-
-    result: list[dict[str, str]] = []
-    for item in raw_messages:
-        if not isinstance(item, dict):
-            continue
-        role = str(item.get("role") or "").strip()
-        content = str(item.get("content") or "")
-        if role in ("user", "assistant") and content.strip():
-            result.append({"role": role, "content": content})
-    return result
-
-
-def _write_record(user_dir: Path, record_name: str, owner: str, messages: list[dict[str, str]]) -> Path:
-    record_dir = user_dir / record_name
-    record_dir.mkdir(parents=True, exist_ok=True)
-    file_path = record_dir / f"{record_name}.json"
-    payload = {
-        "recordName": record_name,
-        "owner": owner,
-        "updatedAt": datetime.now().isoformat(),
-        "messages": messages,
-    }
-    temp_path = file_path.with_suffix(".tmp")
-    temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    temp_path.replace(file_path)
-    return record_dir
+def _write_record(username: str, record_name: str, owner: str, messages: list[dict[str, str]]) -> None:
+    save_conversation_record(
+        username=username,
+        scope=MENTAL_SCOPE,
+        record_name=record_name,
+        messages=messages,
+        extra={"owner": owner},
+    )
 
 
 def _extract_score(text: str, field: str) -> int | None:
@@ -441,25 +509,7 @@ def _extract_score(text: str, field: str) -> int | None:
         return None
 
 
-def _write_score_file(path: Path, record_name: str, score: int) -> None:
-    payload: dict[str, int] = {}
-    if path.exists():
-        try:
-            raw = json.loads(path.read_text(encoding="utf-8"))
-            if isinstance(raw, dict):
-                payload = {
-                    str(key): int(value)
-                    for key, value in raw.items()
-                    if isinstance(key, str) and isinstance(value, (int, float, str)) and str(value).strip().isdigit()
-                }
-        except (OSError, json.JSONDecodeError, ValueError):
-            payload = {}
-
-    payload[record_name] = int(score)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def _persist_analysis_outputs(user_dir: Path, record_name: str, messages: list[dict[str, str]]) -> None:
+def _persist_analysis_outputs(username: str, record_name: str, messages: list[dict[str, str]]) -> None:
     latest_analysis = ""
     for item in reversed(messages):
         if item.get("role") != "assistant":
@@ -472,30 +522,27 @@ def _persist_analysis_outputs(user_dir: Path, record_name: str, messages: list[d
     if not latest_analysis:
         return
 
-    record_dir = user_dir / record_name
-    record_dir.mkdir(parents=True, exist_ok=True)
-    result_path = record_dir / "result.json"
-
     analysis_text = latest_analysis.split("【分析结果】", 1)[1].strip()
 
     sas_score = _extract_score(analysis_text, "SAS")
     sds_score = _extract_score(analysis_text, "SDS")
 
-    result_payload = {
-        "recordName": record_name,
-        "updatedAt": datetime.now().isoformat(),
-        "result": analysis_text,
-        "sasStandardScore": sas_score,
-        "sdsStandardScore": sds_score,
-    }
-    temp_result = result_path.with_suffix(".tmp")
-    temp_result.write_text(json.dumps(result_payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    temp_result.replace(result_path)
-
     if sas_score is not None:
-        _write_score_file(user_dir / "sas.json", record_name, sas_score)
+        upsert_score(
+            username=username,
+            scope=MENTAL_SAS_SCOPE,
+            record_name=record_name,
+            score=sas_score,
+            score_source="extracted",
+        )
     if sds_score is not None:
-        _write_score_file(user_dir / "sds.json", record_name, sds_score)
+        upsert_score(
+            username=username,
+            scope=MENTAL_SDS_SCOPE,
+            record_name=record_name,
+            score=sds_score,
+            score_source="extracted",
+        )
 
 
 def _is_ollama_endpoint(endpoint: str) -> bool:
@@ -585,8 +632,9 @@ def _resolve_ollama_model_name(api_endpoint: str, requested_model: str) -> str |
 
 
 @router.get("/api/mental/config")
-async def get_mental_config() -> JSONResponse:
-    raw = _load_mental_config_raw()
+async def get_mental_config(request: Request) -> JSONResponse:
+    username = _get_request_username(request)
+    raw = _inject_user_model_options(_load_mental_config_raw(), username)
     resolved, options = _resolve_option(raw, None)
 
     payload = {
@@ -605,7 +653,7 @@ async def get_mental_config() -> JSONResponse:
             }
             for item in options
         ],
-        "systemPrompt": _read_text_file(PROMPT_PATH),
+        "systemPrompt": _load_system_prompt(),
     }
     return JSONResponse(content=payload, headers={"Cache-Control": "no-store"})
 
@@ -616,17 +664,17 @@ async def mental_records_get(
     action: str = Query(default="list"),
     name: str = Query(default=""),
 ) -> JSONResponse:
-    _, user_dir = _get_user_mental_dir(request)
+    username = _get_request_username(request)
 
     if action == "list":
-        return JSONResponse(content={"records": _list_record_names(user_dir)}, headers={"Cache-Control": "no-store"})
+        return JSONResponse(content={"records": _list_record_names(username)}, headers={"Cache-Control": "no-store"})
 
     if action == "load":
         record_name = _sanitize_record_name(name)
         if not record_name:
             return JSONResponse(status_code=400, content={"error": "name 参数无效，格式应为 mental-yy-mm-ddThh-mm"})
         try:
-            messages = _read_record_messages(user_dir, record_name)
+            messages = _read_record_messages(username, record_name)
         except FileNotFoundError:
             return JSONResponse(status_code=404, content={"error": "记录不存在"})
         return JSONResponse(content={"recordName": record_name, "messages": messages}, headers={"Cache-Control": "no-store"})
@@ -654,25 +702,25 @@ async def mental_records_put(request: Request, body: SaveBody) -> JSONResponse:
     if provided_record_name and not sanitized_record_name:
         return JSONResponse(status_code=400, content={"error": "recordName 参数无效，格式应为 mental-yy-mm-ddThh-mm"})
 
-    owner, user_dir = _get_user_mental_dir(request)
-    record_name = sanitized_record_name or _build_unique_record_stem(user_dir)
+    owner = _get_request_username(request)
+    record_name = sanitized_record_name or _build_unique_record_stem(owner)
 
-    with _STORE_LOCK:
-        _write_record(user_dir=user_dir, record_name=record_name, owner=owner, messages=messages)
-        _persist_analysis_outputs(user_dir=user_dir, record_name=record_name, messages=messages)
+    _write_record(username=owner, record_name=record_name, owner=owner, messages=messages)
+    _persist_analysis_outputs(username=owner, record_name=record_name, messages=messages)
 
     return JSONResponse(
-        content={"recordName": record_name, "records": _list_record_names(user_dir)},
+        content={"recordName": record_name, "records": _list_record_names(owner)},
         headers={"Cache-Control": "no-store"},
     )
 
 
 @router.post("/api/mental")
-async def mental_proxy(body: ChatBody) -> Response:
+async def mental_proxy(body: ChatBody, request: Request) -> Response:
     if not body.messages:
         return JSONResponse(status_code=400, content={"error": "messages 不能为空"})
 
-    raw = _load_mental_config_raw()
+    username = _get_request_username(request)
+    raw = _inject_user_model_options(_load_mental_config_raw(), username)
     resolved, _ = _resolve_option(raw, body.selectedOptionName)
 
     if resolved is None or not resolved.api_endpoint or not resolved.model:
@@ -690,7 +738,7 @@ async def mental_proxy(body: ChatBody) -> Response:
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
-    payload_messages = _build_upstream_messages(body.messages, _read_text_file(PROMPT_PATH))
+    payload_messages = _build_upstream_messages(body.messages, _load_system_prompt(body.messages))
     requested_stream = body.stream if body.stream is not None else resolved.stream
     requested_temperature = body.temperature if body.temperature is not None else resolved.temperature
 
@@ -805,53 +853,18 @@ async def mental_proxy(body: ChatBody) -> Response:
 
 @router.get("/api/user/charts/mental")
 async def get_mental_charts(request: Request) -> Response:
-    username = _safe_username(_get_session_username(request))
-    user_dir = MENTAL_DATA_DIR / username
-    user_dir.mkdir(parents=True, exist_ok=True)
+    username = _get_request_username(request)
+    sas_records = list_scores(username, MENTAL_SAS_SCOPE)
+    sds_records = list_scores(username, MENTAL_SDS_SCOPE)
 
-    sas_data: dict[str, int] = {}
-    sds_data: dict[str, int] = {}
-
-    sas_path = user_dir / "sas.json"
-    sds_path = user_dir / "sds.json"
-    sas_path_legacy = user_dir / "SAS.json"
-    sds_path_legacy = user_dir / "SDS.json"
-
-    if sas_path.exists() or sas_path_legacy.exists():
-        try:
-            source_path = sas_path if sas_path.exists() else sas_path_legacy
-            raw = json.loads(source_path.read_text(encoding="utf-8"))
-            if isinstance(raw, dict):
-                sas_data = {
-                    str(k): int(v)
-                    for k, v in raw.items()
-                    if isinstance(k, str) and isinstance(v, (int, float, str)) and str(v).strip().isdigit()
-                }
-        except (OSError, json.JSONDecodeError, ValueError):
-            sas_data = {}
-
-    if sds_path.exists() or sds_path_legacy.exists():
-        try:
-            source_path = sds_path if sds_path.exists() else sds_path_legacy
-            raw = json.loads(source_path.read_text(encoding="utf-8"))
-            if isinstance(raw, dict):
-                sds_data = {
-                    str(k): int(v)
-                    for k, v in raw.items()
-                    if isinstance(k, str) and isinstance(v, (int, float, str)) and str(v).strip().isdigit()
-                }
-        except (OSError, json.JSONDecodeError, ValueError):
-            sds_data = {}
-
-    names = sorted(set(sas_data.keys()) | set(sds_data.keys()))
-    sas_points: list[dict[str, int]] = []
-    sds_points: list[dict[str, int]] = []
-
-    for index, name in enumerate(names, start=1):
-        if name in sas_data:
-            sas_points.append({"x": index, "y": int(sas_data[name])})
-        if name in sds_data:
-            sds_points.append({"x": index, "y": int(sds_data[name])})
+    sas_points = [
+        {"x": index + 1, "y": int(item["score"])}
+        for index, item in enumerate(sas_records)
+    ]
+    sds_points = [
+        {"x": index + 1, "y": int(item["score"])}
+        for index, item in enumerate(sds_records)
+    ]
 
     return JSONResponse(
         content={

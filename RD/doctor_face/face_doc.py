@@ -16,6 +16,7 @@ from urllib import request as url_request
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, Response, StreamingResponse
+from storage.db import list_user_model_options, save_diagnosis_record
 
 from PIL import Image, UnidentifiedImageError
 
@@ -30,6 +31,7 @@ CONFIG_PATH = FACE_DIR / "api.json"
 PROMPT_PATH = FACE_DIR / "prompt.md"
 _MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 _STORE_LOCK = Lock()
+FACE_SCOPE = "face"
 
 
 @dataclass
@@ -130,6 +132,19 @@ def _load_face_config_raw() -> dict[str, Any]:
 	except (OSError, json.JSONDecodeError):
 		return {}
 	return {}
+
+
+def _inject_user_model_options(raw: dict[str, Any], username: str) -> dict[str, Any]:
+	merged = dict(raw)
+	configured = raw.get("modelOptions") if isinstance(raw.get("modelOptions"), list) else []
+	merged_options: list[Any] = list(configured)
+
+	normalized_username = (username or "").strip()
+	if normalized_username:
+		merged_options.extend(list_user_model_options(normalized_username, FACE_SCOPE))
+
+	merged["modelOptions"] = merged_options
+	return merged
 
 
 def _normalize_model_options(raw: dict[str, Any]) -> list[ModelOption]:
@@ -264,7 +279,7 @@ def _format_result_filename(now: datetime | None = None) -> str:
 	)
 
 
-def _build_result_paths(user_dir: Path) -> tuple[str, Path, Path, Path]:
+def _build_result_paths(user_dir: Path) -> tuple[str, Path, Path]:
 	base_stem = _format_result_filename()
 	stem = base_stem
 	suffix = 1
@@ -272,7 +287,7 @@ def _build_result_paths(user_dir: Path) -> tuple[str, Path, Path, Path]:
 		stem = f"{base_stem}-{suffix}"
 		suffix += 1
 	record_dir = user_dir / stem
-	return stem, record_dir, record_dir / f"{stem}.json", record_dir / f"{stem}.png"
+	return stem, record_dir, record_dir / f"{stem}.png"
 
 
 def _convert_to_png(raw: bytes) -> bytes:
@@ -511,7 +526,6 @@ def _parse_face_data(text: str) -> dict[str, Any]:
 def _write_face_result(
 	record_stem: str,
 	record_dir: Path,
-	json_path: Path,
 	image_path: Path,
 	image_bytes: bytes,
 	username: str,
@@ -529,10 +543,9 @@ def _write_face_result(
 	if isinstance(face_data, dict) and qixue_score is not None:
 		face_data["qixueScore"] = qixue_score
 		face_data["qixueScoreSource"] = qixue_score_source
-	payload = {
+	_ = {
 		"recordName": record_stem,
 		"owner": username,
-		"updatedAt": datetime.now().isoformat(),
 		"model": model_name,
 		"selectedOptionName": selected_option_name,
 		"prompt": prompt_text,
@@ -542,9 +555,6 @@ def _write_face_result(
 		"qixueScoreSource": qixue_score_source,
 		"outputText": output_text,
 	}
-	temp_path = json_path.with_suffix(".tmp")
-	temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-	temp_path.replace(json_path)
 
 
 @router.post("/api/face/doc")
@@ -562,7 +572,8 @@ async def stream_face_doc(
 	png_bytes = _convert_to_png(raw)
 	image_b64 = base64.b64encode(png_bytes).decode("utf-8")
 
-	raw_config = _load_face_config_raw()
+	username, user_dir = _get_user_face_dir(request)
+	raw_config = _inject_user_model_options(_load_face_config_raw(), username)
 	resolved = _resolve_option(raw_config, selectedOptionName)
 	if resolved is None or not resolved.api_endpoint or not resolved.model:
 		return JSONResponse(status_code=500, content={"error": "RD/doctor_face/api.json 配置不完整"})
@@ -633,8 +644,7 @@ async def stream_face_doc(
 			media_type="text/plain; charset=utf-8",
 		)
 
-	username, user_dir = _get_user_face_dir(request)
-	record_stem, record_dir, json_path, image_path = _build_result_paths(user_dir)
+	record_stem, record_dir, image_path = _build_result_paths(user_dir)
 
 	def plain_text_stream():
 		pieces: list[str] = []
@@ -676,11 +686,11 @@ async def stream_face_doc(
 				pass
 
 			final_text = "".join(pieces)
+			relative_image_path = f"data/face/{username}/{record_stem}/{image_path.name}"
 			with _STORE_LOCK:
 				_write_face_result(
 					record_stem=record_stem,
 					record_dir=record_dir,
-					json_path=json_path,
 					image_path=image_path,
 					image_bytes=png_bytes,
 					username=username,
@@ -691,6 +701,24 @@ async def stream_face_doc(
 					qixue_score=qixue_score_value,
 					qixue_score_source=qixue_score_source,
 				)
+			save_diagnosis_record(
+				username=username,
+				scope=FACE_SCOPE,
+				record_name=record_stem,
+				image_path=relative_image_path,
+				result_text=final_text,
+				payload={
+					"recordName": record_stem,
+					"owner": username,
+					"imagePath": relative_image_path,
+					"outputText": final_text,
+					"qixueScore": qixue_score_value,
+					"qixueScoreSource": qixue_score_source,
+					"faceData": _parse_face_data(final_text),
+				},
+				score=qixue_score_value,
+				score_source=qixue_score_source,
+			)
 			if qixue_score_value is not None:
 				append_face_socre(
 					username=username,
@@ -705,7 +733,7 @@ async def stream_face_doc(
 		headers={
 			"Cache-Control": "no-store",
 			"X-Resolved-Model": active_model,
-			"X-Result-File": f"data/face/{username}/{record_stem}/{json_path.name}",
+			"X-Result-File": f"db:face/{record_stem}",
 			"X-Image-File": f"data/face/{username}/{record_stem}/{image_path.name}",
 			"X-Stream-Enabled": "true",
 		},
